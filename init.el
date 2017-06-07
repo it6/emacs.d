@@ -1038,17 +1038,18 @@ kill it (unless it's modified)."
 ;;----------------------------------------------------------------------------
 ;; Borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
 ;;----------------------------------------------------------------------------
-(defun split-window()
-  "Split the window to see the most recent buffer in the other window.Call a second time to restore the original window configuration."
+(defun sk/split-window()
+  "Split the window to see the most recent buffer in the other window.
+Call a second time to restore the original window configuration."
   (interactive)
-  (if (eq last-command 'split-window)
+  (if (eq last-command 'sk/split-window)
       (progn
-  (jump-to-register :split-window)
-  (setq this-command 'unsplit-window))
-    (window-configuration-to-register :split-window)
+        (jump-to-register :sk/split-window)
+        (setq this-command 'sk/unsplit-window))
+    (window-configuration-to-register :sk/split-window)
     (switch-to-buffer-other-window nil)))
 
-(global-set-key (kbd "<f7>") 'split-window)
+(global-set-key (kbd "<f7>") 'sk/split-window)
 
 ;;----------------------------------------------------------------------------
 ;; Removes default key binding for M-left and M-right
