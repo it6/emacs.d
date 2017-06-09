@@ -127,7 +127,7 @@
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
 ;;----------------------------------------------------------------------------
-(setq desktop-base-file-name (locate-user-emacs-file "cache/emacs-desktop"))
+(defvar desktop-base-file-name (locate-user-emacs-file "cache/emacs-desktop"))
 (desktop-save-mode 1)
 
 ;;----------------------------------------------------------------------------
@@ -354,7 +354,7 @@ Don't mess with special buffers."
 ;;----------------------------------------------------------------------------
 ;; copy file or directory path from current buffer to clipboard
 ;;----------------------------------------------------------------------------
-(defun xah-copy-file-path (&optional *dir-path-only-p)
+(defun surya-copy-file-path (&optional *dir-path-only-p)
   "Copy the current buffer's file path or dired path to `kill-ring'.
 Result is full path.
 *DIR-PATH-ONLY-P is optional 'universal-argument' invoked using `C-u'
@@ -375,10 +375,27 @@ If `universal-argument' is called first, copy only the dir path"
    (message "File path copied: 「%s」" -fpath)
    -fpath )))))
 
-(global-set-key (kbd "C-c c") 'xah-copy-file-path)
+(global-set-key (kbd "C-c c f") 'surya-copy-file-path)
+
+(defun surya-copy-directory-path ()
+  "Copy the current buffer's dired path to `kill-ring'.
+Result is full path."
+  (interactive)
+  (let ((-fpath
+   (if (equal major-mode 'dired-mode)
+       (expand-file-name default-directory)
+     (if (buffer-file-name)
+   (buffer-file-name)
+       (user-error "Current buffer is not associated with a file")))))
+   (progn
+     (kill-new
+     (file-name-directory -fpath))
+     (message "Directory path copied: 「%s」" (file-name-directory -fpath)))))
+
+(global-set-key (kbd "C-c c d") 'surya-copy-directory-path)
 
 ;;----------------------------------------------------------------------------
-;; open git root path
+;; copy git root path to clipboard
 ;;----------------------------------------------------------------------------
 (defun git-root-dir ()
   "Return the current directory's root Git repo directory."
@@ -392,25 +409,28 @@ If not in a Git repo, uses the current directory."
   (interactive)
   (if (git-root-dir)
       (progn
-        (message "GIT root path copied:「%s」" (git-root-dir))
-        (kill-new (git-root-dir)))
+        (kill-new (git-root-dir))
+        (message "GIT root path copied:「%s」" (git-root-dir)))
     (progn
-      (message "File not in GIT repo, copied default path:「%s」" default-directory)
-      (kill-new default-directory))))
+      (kill-new default-directory)
+      (message "File not in GIT repo, copied default path:「%s」" default-directory))))
 
-(global-set-key (kbd "C-c v") 'git-root-path)
+(global-set-key (kbd "C-c c v") 'git-root-path)
 
 ;;----------------------------------------------------------------------------
 ;; Make searches case sensitive
 ;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
-(setq dabbrev-case-fold-search nil)
+(defvar dabbrev-case-fold-search nil)
 
 ;;----------------------------------------------------------------------------
 ;; Zap *up* to char is a handy pair for zap-to-char
+;; Zop-to-char
 ;;----------------------------------------------------------------------------
-(autoload 'zap-up-to-char "misc" "Kill up to, but not including ARGth occurrence of CHAR.")
-(global-set-key (kbd "M-Z") 'zap-up-to-char)
+(use-package zop-to-char
+  :ensure t
+  :bind (([remap zap-to-char] . zop-to-char)
+         ("M-Z" . zop-up-to-char)))
 
 ;;----------------------------------------------------------------------------
 ;; Delete upto camel case or sub words
@@ -499,9 +519,9 @@ COUNT will take an argument"
 (global-set-key (kbd "C-`") 'switch-bury-or-kill-buffer)
 
 (defun switch-bury-or-kill-buffer (&optional aggr)
-  "With no argument, switch (but unlike C-x b, without the need
-to confirm).  With C-u, bury current buffer.  With double C-u,
-kill it (unless it's modified)."
+  "With no argument, switch (but unlike `C-x b', without the need to confirm).
+With `C-u', bury current buffer.  With double `C-u',
+kill it (unless it's modified).  Optional argument AGGR."
   (interactive "P")
   (cond
    ((eq aggr nil) (progn
@@ -574,14 +594,14 @@ kill it (unless it's modified)."
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;;----------------------------------------------------------------------------
-;; browse url of file from emacs opens in default browser
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c i") 'browse-url-of-file)
-
-;;----------------------------------------------------------------------------
 ;; delete pairs of quotes brackets, parens, etc...
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c h") 'delete-pair)
+
+;;----------------------------------------------------------------------------
+;; browse url of file from emacs opens in default browser
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c o b") 'browse-url-of-file)
 
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
@@ -591,13 +611,7 @@ kill it (unless it's modified)."
   (interactive)
   (shell-command (concat "open -R " buffer-file-name)))
 
-(global-set-key (kbd "C-c o") 'reveal-in-finder)
-
-;;----------------------------------------------------------------------------
-;; Javascript file build with node and show output
-;;----------------------------------------------------------------------------
-(eval-after-load 'js
-  '(define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node"))))
+(global-set-key (kbd "C-c o f") 'reveal-in-finder)
 
 ;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
@@ -663,6 +677,29 @@ kill it (unless it's modified)."
   :init (which-key-mode) (which-key-setup-side-window-right))
 
 ;;----------------------------------------------------------------------------
+;; Hide Show mode
+;;----------------------------------------------------------------------------
+(use-package hideshow
+  :commands hs-minor-mode
+  :init
+  (dolist (hook '(c-mode-common-hook
+                  prog-mode-hook
+                  emacs-lisp-mode-hook
+                  python-mode-hook))
+    (add-hook hook #'hs-minor-mode))
+  :config
+  (defun drot|display-code-line-counts (ov)
+    "Unique overlay function to be applied with `hs-minor-mode'."
+    (when (eq 'code (overlay-get ov 'hs))
+      (overlay-put ov 'display
+                   (format "<---> | %d"
+                           (count-lines (overlay-start ov)
+                                        (overlay-end ov))))))
+  ;; Unfold when search is active and apply custom overlay
+  (setq hs-set-up-overlay #'drot|display-code-line-counts)
+  (setq hs-isearch-open t))
+
+;;----------------------------------------------------------------------------
 ;; Expand Region
 ;;----------------------------------------------------------------------------
 (use-package expand-region
@@ -691,7 +728,7 @@ kill it (unless it's modified)."
 ;;----------------------------------------------------------------------------
 ;; Multiple Cursors
 ;;----------------------------------------------------------------------------
-(setq mc/list-file (locate-user-emacs-file "cache/mc-lists"))
+(defvar mc/list-file (locate-user-emacs-file "cache/mc-lists"))
 
 (use-package multiple-cursors
   :bind (("C-<" . mc/mark-previous-like-this)
@@ -704,13 +741,24 @@ kill it (unless it's modified)."
     ("C-c m a" . mc/edit-beginnings-of-lines)))
 
 ;;----------------------------------------------------------------------------
+;; Javascript file build with node and show output
+;;----------------------------------------------------------------------------
+(eval-when-compile
+  (progn
+         (defvar js-mode-map)
+         (defvar json-mode-map)
+         (defvar html-mode-map)
+         (defvar css-mode-map)))
+
+(eval-after-load 'js
+  '(progn
+     (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
+     (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
+
+;;----------------------------------------------------------------------------
 ;; Enable web beautify mode for js, css, html
 ;;----------------------------------------------------------------------------
 (use-package web-beautify)
-
-;; Or if you're using 'js-mode' (a.k.a 'javascript-mode')
-(eval-after-load 'js
-  '(define-key js-mode-map (kbd "C-c b") 'web-beautify-js))
 
 (eval-after-load 'json-mode
   '(define-key json-mode-map (kbd "C-c b") 'json-mode-beautify))
@@ -873,10 +921,16 @@ kill it (unless it's modified)."
 ;; Magit status
 ;;----------------------------------------------------------------------------
 (use-package magit
+  :init
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
   :config
   (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind (("C-x g" . magit-status))
-  :init (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
+  :ensure t
+  :bind (("C-c v v" . magit-status)
+         ("C-c v c" . magit-clone)
+         ("C-c v b" . magit-blame)
+         ("C-c v l" . magit-log-buffer-file)
+         ("C-c v p" . magit-pull)))
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
@@ -902,11 +956,11 @@ kill it (unless it's modified)."
      :bind (
      ("M-x" . counsel-M-x)
      ("\C-s" . swiper)
-     ("C-c s" . swiper-all)
+     ("C-S-s" . swiper-all)
      ("C-x b" . ivy-switch-buffer)
      ("C-x C-f" . counsel-find-file)
      ("C-c f" . counsel-git)
-     ("C-c r" . counsel-rg)
+     ("C-c g" . counsel-rg)
      :map ivy-minibuffer-map
      ("<return>" . ivy-alt-done)))
 
@@ -919,7 +973,7 @@ kill it (unless it's modified)."
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
-  :bind ("C-c g" . rg))
+  :bind ("C-c r" . rg))
 
 ;;----------------------------------------------------------------------------
 ;;use ido-mode
