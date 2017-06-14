@@ -81,6 +81,7 @@
 (setq-default
  blink-cursor-interval 0.4
  bookmark-default-file (locate-user-emacs-file "cache/bookmarks-items")
+ bookmark-save-flag 1
  buffers-menu-max-size 30
  column-number-mode t
  delete-selection-mode t
@@ -146,11 +147,6 @@
 ;;----------------------------------------------------------------------------
 (setq mac-option-modifier 'super)
 (setq mac-command-modifier 'meta)
-
-;;----------------------------------------------------------------------------
-;; auto generate closing brackets globally
-;;----------------------------------------------------------------------------
-(electric-pair-mode t)
 
 ;;----------------------------------------------------------------------------
 ;; Enable recursive minibuffers
@@ -347,7 +343,8 @@ Don't mess with special buffers."
   (progn
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-  (kill-buffer buffer)))))
+  (kill-buffer buffer)))
+    (message "「Closed all other buffers」")))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
 
@@ -554,8 +551,6 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 ;; New line and indent
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "RET") 'newline-and-indent)
-
 (defun newline-at-end-of-line ()
   "Move to end of line, enter a newline, and reindent."
   (interactive)
@@ -594,14 +589,14 @@ kill it (unless it's modified).  Optional argument AGGR."
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;;----------------------------------------------------------------------------
-;; delete pairs of quotes brackets, parens, etc...
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c h") 'delete-pair)
-
-;;----------------------------------------------------------------------------
 ;; browse url of file from emacs opens in default browser
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c o b") 'browse-url-of-file)
+
+;;----------------------------------------------------------------------------
+;; ANSI Term
+;;----------------------------------------------------------------------------
+(bind-key "C-c o t" #'ansi-term)
 
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
@@ -612,6 +607,28 @@ kill it (unless it's modified).  Optional argument AGGR."
   (shell-command (concat "open -R " buffer-file-name)))
 
 (global-set-key (kbd "C-c o f") 'reveal-in-finder)
+
+;;----------------------------------------------------------------------------
+;; Enable Dash Help
+;; Support for the http://kapeli.com/dash documentation browser
+;;----------------------------------------------------------------------------
+(defconst *is-a-mac* (eq system-type 'darwin))
+(defun sanityinc/dash-installed-p ()
+  "Return t if Dash is installed on this machine, or nil otherwise."
+  (let ((lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"))
+    (and (file-executable-p lsregister)
+         (not (string-equal
+               ""
+               (shell-command-to-string
+                (concat lsregister " -dump|grep com.kapeli.dash")))))))
+
+(when (and *is-a-mac* (not (package-installed-p 'dash-at-point)))
+  (message "Checking whether Dash is installed")
+  (when (sanityinc/dash-installed-p)
+    (use-package dash-at-point)))
+
+(when (package-installed-p 'dash-at-point)
+  (global-set-key (kbd "C-c o d") 'dash-at-point))
 
 ;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
@@ -726,6 +743,11 @@ kill it (unless it's modified).  Optional argument AGGR."
       ad-do-it)))
 
 ;;----------------------------------------------------------------------------
+;; delete pairs of quotes brackets, parens, etc...
+;;-------------------------------------------
+(global-set-key (kbd "C-c d p") 'delete-pair)
+
+;;----------------------------------------------------------------------------
 ;; Multiple Cursors
 ;;----------------------------------------------------------------------------
 (defvar mc/list-file (locate-user-emacs-file "cache/mc-lists"))
@@ -780,6 +802,16 @@ kill it (unless it's modified).  Optional argument AGGR."
   :bind ("C-c p" . prettier-js))
 
 ;;----------------------------------------------------------------------------
+;; Markdown mode
+;;----------------------------------------------------------------------------
+(use-package markdown-mode
+  :ensure t
+  :defer t
+  :config
+  (add-hook 'markdown-mode-hook #'tildify-mode)
+  (add-hook 'markdown-mode-hook #'visual-line-mode))
+
+;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
 (use-package color-theme-sanityinc-tomorrow
@@ -819,9 +851,14 @@ kill it (unless it's modified).  Optional argument AGGR."
   (add-hook 'after-init-hook #'yas-global-mode))
 
 ;;----------------------------------------------------------------------------
-;; disable global electric-indent-mode
+;; enable global electric-indent-mode
 ;;----------------------------------------------------------------------------
-(electric-indent-mode 0)
+(electric-indent-mode t)
+
+;;----------------------------------------------------------------------------
+;; auto generate closing brackets globally
+;;----------------------------------------------------------------------------
+(electric-pair-mode t)
 
 ;;----------------------------------------------------------------------------
 ;; use company mode
@@ -837,6 +874,11 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; ----------------------------------------------------------------------------
 (use-package less-css-mode)
 (add-hook 'less-css-mode-hook
+    (lambda ()
+      (company-mode +1)
+      (set (make-local-variable 'company-backends) '(company-css))))
+
+(add-hook 'css-mode-hook
     (lambda ()
       (company-mode +1)
       (set (make-local-variable 'company-backends) '(company-css))))
@@ -998,8 +1040,8 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; ----------------------------------------------------------------------------
 ;; idomenu ubiquitous gets auto completion on all possible mini buffer menus
 ;; ----------------------------------------------------------------------------
-(use-package ido-ubiquitous)
-(ido-ubiquitous-mode t)
+;; (use-package ido-ubiquitous)
+;; (ido-ubiquitous-mode t)
 
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
@@ -1026,8 +1068,8 @@ kill it (unless it's modified).  Optional argument AGGR."
 (use-package move-dup
   :bind (("M-<up>" . md/move-lines-up)
    ("M-<down>" . md/move-lines-down)
-   ("C-c d" . md/duplicate-down)
-   ("C-c D" . md/duplicate-up)))
+   ("C-c d d" . md/duplicate-down)
+   ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
 ;; Add clipboard kills from other programs to emacs kill ring
@@ -1161,9 +1203,20 @@ Call a second time to restore the original window configuration."
 
 
 
-
-
-
 ;;----------------------------------------------------------------------------
 ;; custom settings
 ;;----------------------------------------------------------------------------
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   (quote
+    (buffer-move wgrep page-break-lines move-dup switch-window rainbow-mode rg ivy-hydra counsel feature-mode magit diff-hl tide flycheck avy undo-tree less-css-mode company yasnippet clang-format json-mode color-theme-sanityinc-tomorrow markdown-mode prettier-js web-beautify multiple-cursors highlight-symbol expand-region which-key dash-at-point whole-line-or-region smex zop-to-char ibuffer-vc exec-path-from-shell use-package))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
