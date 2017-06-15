@@ -123,7 +123,7 @@
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "Source Code Pro")
-(setq default-frame-alist '((font . "mononoki-15")))
+(setq default-frame-alist '((font . "operator mono-15")))
 
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
@@ -642,9 +642,10 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 ;; Cut/copy the current line if no region is active
 ;;----------------------------------------------------------------------------
-(use-package whole-line-or-region)
-(whole-line-or-region-mode t)
-(diminish 'whole-line-or-region-mode)
+(use-package whole-line-or-region
+  :diminish whole-line-or-region-mode
+  :config
+  (whole-line-or-region-mode t))
 (make-variable-buffer-local 'whole-line-or-region-mode)
 
 (defun suspend-mode-during-cua-rect-selection (mode-name)
@@ -691,6 +692,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; Prompts all available key bindings in a given buffer
 ;;----------------------------------------------------------------------------
 (use-package which-key
+  :diminish which-key-mode
   :init (which-key-mode) (which-key-setup-side-window-right))
 
 ;;----------------------------------------------------------------------------
@@ -698,6 +700,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (use-package hideshow
   :commands hs-minor-mode
+  :diminish hs-minor-mode
   :init
   (dolist (hook '(c-mode-common-hook
                   prog-mode-hook
@@ -717,15 +720,27 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq hs-isearch-open t))
 
 ;;----------------------------------------------------------------------------
-;; Expand Region
+;; show indent guides
+;;----------------------------------------------------------------------------
+(use-package indent-guide
+  :diminish indent-guide-mode
+  :config
+  (add-hook 'prog-mode-hook 'indent-guide-mode)
+  (setq indent-guide-char "¦"))
+  ;; (setq indent-guide-char "┊┆ ⁞, ⋮, ┆, ┊, ┋, ┇, ︙, │, ┆,│, ┊, ┆, ¦"))
+
+
+;;----------------------------------------------------------------------------
+;; expand region
 ;;----------------------------------------------------------------------------
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
 
 ;;----------------------------------------------------------------------------
-;; Symbol Highlight at Point and navigate next previous
+;; symbol highlight at point and navigate next previous
 ;;----------------------------------------------------------------------------
 (use-package highlight-symbol
+  :diminish highlight-symbol-mode
   :bind (
     ("M-n" . highlight-symbol-next)
     ("M-p" . highlight-symbol-prev))
@@ -734,7 +749,6 @@ kill it (unless it's modified).  Optional argument AGGR."
     (add-hook hook 'highlight-symbol-mode)
     (add-hook hook 'highlight-symbol-nav-mode))
     (add-hook 'org-mode-hook 'highlight-symbol-nav-mode)
-    (diminish 'highlight-symbol-mode)
   :config
   (defadvice highlight-symbol-temp-highlight (around maybe-suppress activate)
     "Suppress symbol highlighting while isearching."
@@ -744,7 +758,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 
 ;;----------------------------------------------------------------------------
 ;; delete pairs of quotes brackets, parens, etc...
-;;-------------------------------------------
+;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
@@ -773,9 +787,48 @@ kill it (unless it's modified).  Optional argument AGGR."
          (defvar css-mode-map)))
 
 (eval-after-load 'js
-  '(progn
+  (lambda()
      (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
      (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
+
+;;----------------------------------------------------------------------------
+;; use letters in circles as mode names to reduce clutter
+;;----------------------------------------------------------------------------
+(add-hook 'js-mode-hook
+  (lambda()
+    (setq mode-name "Ⓙ")))
+
+(add-hook 'c-mode-hook
+  (lambda()
+    (setq mode-name "Ⓒ")))
+
+(add-hook 'json-mode-hook
+  (lambda()
+    (setq mode-name "Ⓙ")))
+
+(add-hook 'sgml-mode-hook
+  (lambda()
+    (setq mode-name "Ⓗ")))
+
+(add-hook 'css-mode-hook
+  (lambda()
+    (setq mode-name "Ⓒ")))
+
+(add-hook 'less-css-mode-hook
+  (lambda()
+    (setq mode-name "Ⓛ")))
+
+(add-hook 'scss-mode-hook
+  (lambda()
+    (setq mode-name "Ⓢ")))
+
+(add-hook 'feature-mode-hook
+  (lambda()
+    (setq mode-name "Ⓕ")))
+
+(add-hook 'emacs-lisp-mode-hook
+  (lambda()
+    (setq mode-name "Ⓔ")))
 
 ;;----------------------------------------------------------------------------
 ;; Enable web beautify mode for js, css, html
@@ -795,7 +848,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
 
 ;;----------------------------------------------------------------------------
-;; Use Prettier for JS2 mode formatting
+;; Use Prettier for JS mode formatting
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
@@ -845,10 +898,13 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; Load Yasnippets
 ;;----------------------------------------------------------------------------
 (use-package yasnippet
+  :diminish yas-minor-mode
   :ensure t
   :commands yas-global-mode
   :init
-  (add-hook 'after-init-hook #'yas-global-mode))
+  ;; we don't want yasnippet running in terminals
+  (add-hook 'term-mode-hook (lambda()
+                              (yas-minor-mode -1))))
 
 ;;----------------------------------------------------------------------------
 ;; enable global electric-indent-mode
@@ -863,7 +919,8 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 ;; use company mode
 ;;----------------------------------------------------------------------------
-(use-package company)
+(use-package company
+  :diminish company-mode)
 ; aligns annotation to the right hand side
 (setq company-tooltip-align-annotations t)
 
@@ -888,7 +945,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (use-package undo-tree
   :ensure t
-  :diminish (undo-tree-mode . "UnT")
+  :diminish (undo-tree-mode)
   :commands global-undo-tree-mode
   :init
   (add-hook 'after-init-hook #'global-undo-tree-mode)
@@ -910,6 +967,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; Enable flycheck mode globally
 ;;----------------------------------------------------------------------------
 (use-package flycheck
+  :diminish(flycheck-mode "ⓕ")
   :config
   (global-flycheck-mode)
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
@@ -931,7 +989,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
 
 ;;----------------------------------------------------------------------------
-;; set typescript mode to use js2 syntax
+;; set typescript mode
 ;;----------------------------------------------------------------------------
 (defun setup-tide-mode ()
   "Setup tide mode."
@@ -956,6 +1014,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 
 ;;----------------------------------------------------------------------------
 ;; Show matching parens
+;; Highlight matching parentheses
 ;;----------------------------------------------------------------------------
 (show-paren-mode 1)
 
@@ -990,21 +1049,22 @@ kill it (unless it's modified).  Optional argument AGGR."
   :config
   (setq counsel-find-file-at-point t))
 
- (use-package ivy
-   :init
-     (setq ivy-use-virtual-buffers t)
-     (setq ivy-count-format "(%d/%d) ")
-     (ivy-mode 1)
-     :bind (
-     ("M-x" . counsel-M-x)
-     ("\C-s" . swiper)
-     ("C-S-s" . swiper-all)
-     ("C-x b" . ivy-switch-buffer)
-     ("C-x C-f" . counsel-find-file)
-     ("C-c f" . counsel-git)
-     ("C-c g" . counsel-rg)
-     :map ivy-minibuffer-map
-     ("<return>" . ivy-alt-done)))
+(use-package ivy
+  :diminish (ivy-mode "ⓘ")
+  :init
+  (setq ivy-use-virtual-buffers t)
+  (setq ivy-count-format "(%d/%d) ")
+  (ivy-mode 1)
+  :bind (
+         ("M-x" . counsel-M-x)
+         ("\C-s" . swiper)
+         ("C-S-s" . swiper-all)
+         ("C-x b" . ivy-switch-buffer)
+         ("C-x C-f" . counsel-find-file)
+         ("C-c f" . counsel-git)
+         ("C-c g" . counsel-rg)
+         :map ivy-minibuffer-map
+         ("<return>" . ivy-alt-done)))
 
 ;;----------------------------------------------------------------------------
 ;; ivy-hydra brings some extra goodness to ivy-buffer with C-o
@@ -1037,16 +1097,11 @@ kill it (unless it's modified).  Optional argument AGGR."
 
 (setq ido-save-directory-list-file (locate-user-emacs-file "cache/ido-last"))
 
-;; ----------------------------------------------------------------------------
-;; idomenu ubiquitous gets auto completion on all possible mini buffer menus
-;; ----------------------------------------------------------------------------
-;; (use-package ido-ubiquitous)
-;; (ido-ubiquitous-mode t)
-
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
 ;;----------------------------------------------------------------------------
 (use-package rainbow-mode
+  :diminish rainbow-mode
   :config
   (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook sass-mode-hook))
     (add-hook hook 'rainbow-mode)))
@@ -1086,6 +1141,17 @@ kill it (unless it's modified).  Optional argument AGGR."
       auto-revert-verbose nil)
 
 ;;----------------------------------------------------------------------------
+;; don't show some minor modes
+;;----------------------------------------------------------------------------
+(diminish 'auto-revert-mode)
+(add-hook 'orgtbl-mode-hook
+          '(lambda ()
+             (diminish 'orgtbl-mode)))
+(add-hook 'abbrev-mode-hook
+          '(lambda ()
+             (diminish 'abbrev-mode)))
+
+;;----------------------------------------------------------------------------
 ;; M-; to comment/uncomment current line
 ;;----------------------------------------------------------------------------
 (defun toggle-comment-on-line ()
@@ -1093,15 +1159,15 @@ kill it (unless it's modified).  Optional argument AGGR."
   (interactive)
   (comment-or-uncomment-region (line-beginning-position) (line-end-position)))
 
-(global-set-key (kbd "C-c C-;") 'toggle-comment-on-line)
+(global-set-key (kbd "C-x :") 'toggle-comment-on-line)
 
 ;;----------------------------------------------------------------------------
 ;; Page break lines
 ;;----------------------------------------------------------------------------
 (use-package page-break-lines
+  :diminish page-break-lines-mode
   :init
-  (global-page-break-lines-mode)
-  (diminish 'page-break-lines-mode))
+  (global-page-break-lines-mode))
 
 ;;----------------------------------------------------------------------------
 ;; use package wgrep to edit multiple search results
@@ -1206,17 +1272,3 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; custom settings
 ;;----------------------------------------------------------------------------
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   (quote
-    (buffer-move wgrep page-break-lines move-dup switch-window rainbow-mode rg ivy-hydra counsel feature-mode magit diff-hl tide flycheck avy undo-tree less-css-mode company yasnippet clang-format json-mode color-theme-sanityinc-tomorrow markdown-mode prettier-js web-beautify multiple-cursors highlight-symbol expand-region which-key dash-at-point whole-line-or-region smex zop-to-char ibuffer-vc exec-path-from-shell use-package))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
