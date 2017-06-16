@@ -2,7 +2,7 @@
 ;;; Commentary:
 ;;; Code:
 ;;----------------------------------------------------------------------------
-;; Require package
+;; require package
 ;;----------------------------------------------------------------------------
 (require 'package)
 (setq package-enable-at-startup nil)
@@ -13,7 +13,7 @@
         ("MELPA"        . "https://melpa.org/packages/")))
 
 ;;----------------------------------------------------------------------------
-;; Debugging Message Limit to 10000
+;; debugging message limit to 10000
 ;;----------------------------------------------------------------------------
 (setq message-log-max 10000)
 
@@ -26,17 +26,17 @@
 (setq create-lockfiles nil)
 
 ;;----------------------------------------------------------------------------
-;; Put underline below the font bottom line
+;; put underline below the font bottom line
 ;;----------------------------------------------------------------------------
 (setq x-underline-at-descent-line t)
 
 ;;----------------------------------------------------------------------------
-;; Keep window point when switching buffers this works across frames
+;; keep window point when switching buffers this works across frames
 ;;----------------------------------------------------------------------------
 (setq switch-to-buffer-preserve-window-point t)
 
 ;;----------------------------------------------------------------------------
-;; Do not save duplicates in history and kill ring
+;; do not save duplicates in history and kill ring
 ;;----------------------------------------------------------------------------
 (setq history-delete-duplicates t)
 (setq kill-do-not-save-duplicates t)
@@ -59,12 +59,12 @@
 (require 'use-package)
 
 ;;----------------------------------------------------------------------------
-;; Please don't load outdated byte code
+;; don't load outdated byte code
 ;;----------------------------------------------------------------------------
 (setq load-prefer-newer t)
 
 ;;----------------------------------------------------------------------------
-;; Go download any package if not already present on my system
+;; go download any missing packages
 ;;----------------------------------------------------------------------------
 (setq use-package-always-ensure t)
 
@@ -75,8 +75,26 @@
 (when (memq window-system '(mac ns))
   (exec-path-from-shell-initialize))
 
+;;----------------------------------------------------------------------------
+;; suppress some GUI features
+;;----------------------------------------------------------------------------
+(setq use-file-dialog nil)
+(setq use-dialog-box nil)
+(setq inhibit-startup-screen t)
+(setq inhibit-startup-echo-area-message t)
+
+;;----------------------------------------------------------------------------
+;; disable toolbars
+;;----------------------------------------------------------------------------
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+(when (fboundp 'set-scroll-bar-mode)
+  (set-scroll-bar-mode nil))
+(when (fboundp 'menu-bar-mode)
+  (menu-bar-mode -1))
+
 ;; ----------------------------------------------------------------------------
-;; Some basic preferences
+;; some basic preferences
 ;; ----------------------------------------------------------------------------
 (setq-default
  blink-cursor-interval 0.4
@@ -92,30 +110,29 @@
  tooltip-delay 1.5
  truncate-lines nil
  truncate-partial-width-windows nil)
-(transient-mark-mode t)
 
 ;;----------------------------------------------------------------------------
-;; Show file path in frame title
+;; show file path in frame title
 ;;----------------------------------------------------------------------------
 (setq-default frame-title-format
         '(:eval
-    (format "%s - %s"
+    (format "%s  %s"
       (buffer-name)
       (cond
        (buffer-file-truename
-        (concat "(" (abbreviate-file-name default-directory) ")"))
+        (concat " ▓ " (abbreviate-file-name default-directory)))
        (dired-directory
-        (concat "{" dired-directory "}"))
+        (concat " ▓ " dired-directory))
        (t
-        "[no file]")))))
+        " ▓ no file")))))
 
 ;;----------------------------------------------------------------------------
-;; Set default directory for cache
+;; set default directory for cache
 ;;----------------------------------------------------------------------------
 (make-directory (locate-user-emacs-file "cache") t)
 
 ;;----------------------------------------------------------------------------
-;; Move point all the way when scrolling to buffer boundaries
+;; move point all the way when scrolling to buffer boundaries
 ;;----------------------------------------------------------------------------
 (setq scroll-error-top-bottom t)
 
@@ -132,7 +149,7 @@
 (desktop-save-mode 1)
 
 ;;----------------------------------------------------------------------------
-;; A simple visible bell which works in all terminal types
+;; simple visible bell which works in all terminal types
 ;;----------------------------------------------------------------------------
 (defun flash-mode-line ()
   "Flash modeline on bad commands."
@@ -143,23 +160,23 @@
  ring-bell-function 'flash-mode-line)
 
 ;;----------------------------------------------------------------------------
-;; set option as super and command as meta keys on osx
+;; set option as super key and command as meta key
 ;;----------------------------------------------------------------------------
 (setq mac-option-modifier 'super)
 (setq mac-command-modifier 'meta)
 
 ;;----------------------------------------------------------------------------
-;; Enable recursive minibuffers
+;; enable recursive minibuffers
 ;;----------------------------------------------------------------------------
 (setq enable-recursive-minibuffers t)
 
 ;;----------------------------------------------------------------------------
-;; Enable all disabled commands
+;; enable all disabled commands
 ;;----------------------------------------------------------------------------
 (setq disabled-command-function nil)
 
 ;;----------------------------------------------------------------------------
-;; Indicate minibuffer recursion depth
+;; indicate minibuffer recursion depth
 ;;----------------------------------------------------------------------------
 (minibuffer-depth-indicate-mode)
 
@@ -176,7 +193,7 @@
 (add-hook 'before-save-hook 'whitespace-cleanup)
 
 ;;----------------------------------------------------------------------------
-;; Draw block cursor as wide as the glyph under it
+;; draw block cursor as wide as the glyph under it
 ;;----------------------------------------------------------------------------
 (setq x-stretch-cursor t)
 
@@ -247,20 +264,12 @@
 (global-set-key (kbd "C-x C-b") 'ibuffer)
 
 ;;----------------------------------------------------------------------------
-;; Treat all themes as safe
+;; treat all themes as safe
 ;;----------------------------------------------------------------------------
 (setq custom-safe-themes t)
 
 ;;----------------------------------------------------------------------------
-;; Imenu configuration
-;;----------------------------------------------------------------------------
-(use-package imenu
-  :defer t
-  :config
-  (setq imenu-auto-rescan t))
-
-;;----------------------------------------------------------------------------
-;; Rename both buffer and file name
+;; rename both buffer and file name
 ;;----------------------------------------------------------------------------
 (defun rename-this-buffer-and-file ()
   "Renames current buffer and file it is visiting."
@@ -282,49 +291,35 @@
 (global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
-;; add new line at the end of the file
-;;----------------------------------------------------------------------------
-(setq require-final-newline nil)
-(setq mode-require-final-newline nil)
-
-;;----------------------------------------------------------------------------
-;; Mouse yank at point instead of click
+;; mouse yank at point instead of click
 ;;----------------------------------------------------------------------------
 (setq mouse-yank-at-point t)
 
 ;;----------------------------------------------------------------------------
-;; Increase maximum size of the mark ring
+;; increase maximum size of the mark ring
 ;;----------------------------------------------------------------------------
 (setq mark-ring-max 30)
 
 ;;----------------------------------------------------------------------------
-;; Use spaces instead of tabs and set default tab width
+;; use spaces instead of tabs and set default tab width
 ;;----------------------------------------------------------------------------
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 2)
 
 ;;----------------------------------------------------------------------------
-;; Ignore case on completion
+;; ignore case on completion
 ;;----------------------------------------------------------------------------
 (setq read-file-name-completion-ignore-case t)
 (setq read-buffer-completion-ignore-case t)
 
 ;;----------------------------------------------------------------------------
-;; Disable toolbars and startup screen
-;;----------------------------------------------------------------------------
-(menu-bar-mode -1)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(setq inhibit-startup-screen t)
-
-;;----------------------------------------------------------------------------
-;; Emacs Initial Scratch Message
+;; emacs initial scratch message
 ;;----------------------------------------------------------------------------
 (setq-default initial-scratch-message
   (concat ";; Happy hacking Surya - Emacs ♥ you!\n\n"))
 
 ;;----------------------------------------------------------------------------
-;; Maximize emacs window on load
+;; maximize emacs window on load
 ;;----------------------------------------------------------------------------
 (setq frame-resize-pixelwise t)
 (add-hook 'window-setup-hook 'toggle-frame-maximized t)
@@ -415,14 +410,14 @@ If not in a Git repo, uses the current directory."
 (global-set-key (kbd "C-c c v") 'git-root-path)
 
 ;;----------------------------------------------------------------------------
-;; Make searches case sensitive
+;; make searches case sensitive
 ;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
 (defvar dabbrev-case-fold-search nil)
 
 ;;----------------------------------------------------------------------------
-;; Zap *up* to char is a handy pair for zap-to-char
-;; Zop-to-char
+;; zap *up* to char is a handy pair for zap-to-char
+;; zop-to-char for visual representation of content before zapping
 ;;----------------------------------------------------------------------------
 (use-package zop-to-char
   :ensure t
@@ -430,7 +425,7 @@ If not in a Git repo, uses the current directory."
          ("M-Z" . zop-up-to-char)))
 
 ;;----------------------------------------------------------------------------
-;; Delete upto camel case or sub words
+;; delete upto camel case or sub words
 ;;----------------------------------------------------------------------------
 (defconst camelCase-regexp "\\([A-Z]?[a-z]+\\|[A-Z]+\\|[0-9]+\\)"
   ;; capital must be before uppercase
@@ -511,7 +506,7 @@ COUNT will take an argument"
 (global-set-key (kbd "<C-backspace>") 'camelCase-backward-kill-word)
 
 ;;----------------------------------------------------------------------------
-;; Fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
+;; toggle between all open buffers quickly
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-`") 'switch-bury-or-kill-buffer)
 
@@ -530,7 +525,7 @@ kill it (unless it's modified).  Optional argument AGGR."
    ((equal aggr '(16)) (kill-buffer-if-not-modified (current-buffer)))))
 
 ;;----------------------------------------------------------------------------
-;; Fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
+;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
 ;;----------------------------------------------------------------------------
 (defun backward-up-sexp (arg)
   "Jump up to the start of the ARG'th enclosing sexp."
@@ -549,7 +544,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (global-set-key (kbd "M-`") 'ns-next-frame)
 
 ;;----------------------------------------------------------------------------
-;; New line and indent
+;; new line and indent
 ;;----------------------------------------------------------------------------
 (defun newline-at-end-of-line ()
   "Move to end of line, enter a newline, and reindent."
@@ -576,7 +571,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (setq ns-pop-up-frames nil)
 
 ;;----------------------------------------------------------------------------
-;; Rearrange window height
+;; rearrange window height
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "s-<up>") 'enlarge-window)
 (global-set-key (kbd "s-<down>") 'shrink-window)
@@ -609,8 +604,8 @@ kill it (unless it's modified).  Optional argument AGGR."
 (global-set-key (kbd "C-c o f") 'reveal-in-finder)
 
 ;;----------------------------------------------------------------------------
-;; Enable Dash Help
-;; Support for the http://kapeli.com/dash documentation browser
+;; enable Dash Help
+;; support for the http://kapeli.com/dash documentation browser
 ;;----------------------------------------------------------------------------
 (defconst *is-a-mac* (eq system-type 'darwin))
 (defun sanityinc/dash-installed-p ()
@@ -640,7 +635,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq smex-save-file (locate-user-emacs-file "cache/smex-items")))
 
 ;;----------------------------------------------------------------------------
-;; Cut/copy the current line if no region is active
+;; cut/copy the current line if no region is active
 ;;----------------------------------------------------------------------------
 (use-package whole-line-or-region
   :diminish whole-line-or-region-mode
@@ -667,7 +662,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
 
 ;;----------------------------------------------------------------------------
-;; Save recent files list
+;; save recent files list
 ;;----------------------------------------------------------------------------
 (use-package recentf
   :config
@@ -683,20 +678,20 @@ kill it (unless it's modified).  Optional argument AGGR."
   (recentf-mode))
 
 ;;----------------------------------------------------------------------------
-;; Remember cursor/point position in buffers using saveplace
+;; remember cursor/point position in buffers using saveplace
 ;;----------------------------------------------------------------------------
 (save-place-mode 1)
 (setq save-place-file (locate-user-emacs-file "cache/saved-places"))
 
 ;;----------------------------------------------------------------------------
-;; Prompts all available key bindings in a given buffer
+;; prompts all available key bindings in a given buffer
 ;;----------------------------------------------------------------------------
 (use-package which-key
   :diminish which-key-mode
   :init (which-key-mode) (which-key-setup-side-window-right))
 
 ;;----------------------------------------------------------------------------
-;; Hide Show mode
+;; hide show mode
 ;;----------------------------------------------------------------------------
 (use-package hideshow
   :commands hs-minor-mode
@@ -729,7 +724,6 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq indent-guide-char "¦"))
   ;; (setq indent-guide-char "┊┆ ⁞, ⋮, ┆, ┊, ┋, ┇, ︙, │, ┆,│, ┊, ┆, ¦"))
 
-
 ;;----------------------------------------------------------------------------
 ;; expand region
 ;;----------------------------------------------------------------------------
@@ -757,12 +751,7 @@ kill it (unless it's modified).  Optional argument AGGR."
       ad-do-it)))
 
 ;;----------------------------------------------------------------------------
-;; delete pairs of quotes brackets, parens, etc...
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c d p") 'delete-pair)
-
-;;----------------------------------------------------------------------------
-;; Multiple Cursors
+;; multiple cursors
 ;;----------------------------------------------------------------------------
 (defvar mc/list-file (locate-user-emacs-file "cache/mc-lists"))
 
@@ -777,7 +766,7 @@ kill it (unless it's modified).  Optional argument AGGR."
     ("C-c m a" . mc/edit-beginnings-of-lines)))
 
 ;;----------------------------------------------------------------------------
-;; Javascript file build with node and show output
+;; javascript file build with node and show output
 ;;----------------------------------------------------------------------------
 (eval-when-compile
   (progn
@@ -831,7 +820,7 @@ kill it (unless it's modified).  Optional argument AGGR."
     (setq mode-name "Ⓔ")))
 
 ;;----------------------------------------------------------------------------
-;; Enable web beautify mode for js, css, html
+;; enable web beautify mode for js, css, html
 ;;----------------------------------------------------------------------------
 (use-package web-beautify)
 
@@ -848,14 +837,14 @@ kill it (unless it's modified).  Optional argument AGGR."
   '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
 
 ;;----------------------------------------------------------------------------
-;; Use Prettier for JS mode formatting
+;; use Prettier for JS mode formatting
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
   :bind ("C-c p" . prettier-js))
 
 ;;----------------------------------------------------------------------------
-;; Markdown mode
+;; markdown mode
 ;;----------------------------------------------------------------------------
 (use-package markdown-mode
   :ensure t
@@ -872,14 +861,14 @@ kill it (unless it's modified).  Optional argument AGGR."
     (load-theme 'sanityinc-tomorrow-eighties t))
 
 ;;----------------------------------------------------------------------------
-;; Use json-mode
+;; sse json-mode
 ;;----------------------------------------------------------------------------
 (use-package json-mode
   :init
     (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
 
 ;;----------------------------------------------------------------------------
-;; Setup clang-format and execute C programs configuration
+;; setup clang-format and execute C programs configuration
 ;; (add-hook 'before-save-hook 'clang-format-before-save).
 ;;----------------------------------------------------------------------------
 (use-package clang-format)
@@ -888,14 +877,14 @@ kill it (unless it's modified).  Optional argument AGGR."
   (interactive)
   (when (eq major-mode 'c-mode) (clang-format-buffer)))
 
-;; Install hook to use clang-format on save
+;; install hook to use clang-format on save
 (add-hook 'before-save-hook 'clang-format-before-save)
 
 (eval-after-load 'cc-mode
   '(define-key c-mode-map (kbd "C-c e") '(lambda ()  (interactive) (defvar sk-build-command) (setq sk-build-command (concat "clang " (buffer-name) " && ./a.out")) (shell-command sk-build-command) )))
 
 ;;----------------------------------------------------------------------------
-;; Load Yasnippets
+;; load yasnippets
 ;;----------------------------------------------------------------------------
 (use-package yasnippet
   :diminish yas-minor-mode
@@ -941,7 +930,7 @@ kill it (unless it's modified).  Optional argument AGGR."
       (set (make-local-variable 'company-backends) '(company-css))))
 
 ;;----------------------------------------------------------------------------
-;; Use undo-tree
+;; use undo-tree
 ;;----------------------------------------------------------------------------
 (use-package undo-tree
   :ensure t
@@ -956,7 +945,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq undo-tree-visualizer-relative-timestamps t))
 
 ;;----------------------------------------------------------------------------
-;; Use Avy to jump between words in visible buffers
+;; use Avy to jump between words in visible buffers
 ;;----------------------------------------------------------------------------
 (use-package avy
   :bind
@@ -964,7 +953,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   ("C-;" . avy-goto-subword-1))
 
 ;;----------------------------------------------------------------------------
-;; Enable flycheck mode globally
+;; enable flycheck mode globally
 ;;----------------------------------------------------------------------------
 (use-package flycheck
   :diminish(flycheck-mode "ⓕ")
@@ -973,7 +962,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
 
 ;;----------------------------------------------------------------------------
-;; Load eslint from local node_modules when possible
+;; load eslint from local node_modules when possible
 ;;----------------------------------------------------------------------------
 (defun use-eslint-from-node-modules ()
   "Load eslint from local node_modules if available."
@@ -1009,23 +998,38 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 ;; use diff-hl  mode
 ;;----------------------------------------------------------------------------
-(use-package diff-hl)
-(global-diff-hl-mode)
+;; (use-package diff-hl)
+;; (global-diff-hl-mode)
+
+(use-package diff-hl
+  :ensure t
+  :commands global-diff-hl-mode
+  :init
+  (add-hook 'after-init-hook #'global-diff-hl-mode)
+  :config
+  ;; Update diffs immediately
+  (diff-hl-flydiff-mode)
+  ;; Add hooks for other packages
+  (add-hook 'dired-mode-hook #'diff-hl-dired-mode)
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+  ;; Use margin display when in terminal
+  (unless (display-graphic-p)
+    (diff-hl-margin-mode)))
 
 ;;----------------------------------------------------------------------------
-;; Show matching parens
-;; Highlight matching parentheses
+;; show matching parens
+;; highlight matching parentheses
 ;;----------------------------------------------------------------------------
 (show-paren-mode 1)
+(setq show-paren-when-point-inside-paren t)
 
 ;;----------------------------------------------------------------------------
-;; Magit status
+;; magit status
 ;;----------------------------------------------------------------------------
 (use-package magit
-  :init
-  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
   :config
   (add-hook 'magit-mode-hook 'visual-line-mode)
+  (setq magit-push-current-to-pushremote t)
   :ensure t
   :bind (("C-c v v" . magit-status)
          ("C-c v c" . magit-clone)
@@ -1039,7 +1043,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (use-package feature-mode)
 
 ;;----------------------------------------------------------------------------
-;; Set Ivy mode, counsel for auto completions across emacs
+;; set ivy mode, counsel for auto completions across emacs
 ;;----------------------------------------------------------------------------
 (use-package counsel
   :bind
@@ -1062,7 +1066,7 @@ kill it (unless it's modified).  Optional argument AGGR."
          ("C-x b" . ivy-switch-buffer)
          ("C-x C-f" . counsel-find-file)
          ("C-c f" . counsel-git)
-         ("C-c g" . counsel-rg)
+         ("C-c r" . counsel-rg)
          :map ivy-minibuffer-map
          ("<return>" . ivy-alt-done)))
 
@@ -1075,11 +1079,11 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
-  :bind ("C-c r" . rg))
+  :bind ("C-c R" . rg))
 
 ;;----------------------------------------------------------------------------
-;;use ido-mode
-;; Use C-f during file selection to switch to regular find-file
+;; use ido-mode
+;; use C-f during file selection to switch to regular find-file
 ;;----------------------------------------------------------------------------
 (use-package ido
   :config
@@ -1107,7 +1111,7 @@ kill it (unless it's modified).  Optional argument AGGR."
     (add-hook hook 'rainbow-mode)))
 
 ;;----------------------------------------------------------------------------
-;; Make "C-x o" prompt for a target window when there are more than 2
+;; make "C-x o" prompt for a target window when there are more than 2
 ;;----------------------------------------------------------------------------
 (use-package switch-window
   :config
@@ -1116,7 +1120,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   :bind("C-x o" . switch-window))
 
 ;;----------------------------------------------------------------------------
-;; Shift lines up and down with M-up and M-down. When paredit is enabled,
+;; shift lines up and down with M-up and M-down. When paredit is enabled,
 ;; it will use those keybindings. For this reason, you might prefer to
 ;; use M-S-up and M-S-down, which will work even in lisp modes.
 ;;----------------------------------------------------------------------------
@@ -1127,7 +1131,7 @@ kill it (unless it's modified).  Optional argument AGGR."
    ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
-;; Add clipboard kills from other programs to emacs kill ring
+;; add clipboard kills from other programs to emacs kill ring
 ;;----------------------------------------------------------------------------
 (setq save-interprogram-paste-before-kill t)
 
@@ -1136,9 +1140,9 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (global-auto-revert-mode 1)
 (setq auto-revert-verbose nil)
-(global-set-key (kbd "<f5>") 'revert-buffer)
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
+(global-set-key (kbd "<f5>") 'revert-buffer)
 
 ;;----------------------------------------------------------------------------
 ;; don't show some minor modes
@@ -1152,7 +1156,7 @@ kill it (unless it's modified).  Optional argument AGGR."
              (diminish 'abbrev-mode)))
 
 ;;----------------------------------------------------------------------------
-;; M-; to comment/uncomment current line
+;; C-x ;, C-x : to comment/uncomment current line
 ;;----------------------------------------------------------------------------
 (defun toggle-comment-on-line ()
   "Comment or uncomment current line."
@@ -1162,7 +1166,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (global-set-key (kbd "C-x :") 'toggle-comment-on-line)
 
 ;;----------------------------------------------------------------------------
-;; Page break lines
+;; page break lines
 ;;----------------------------------------------------------------------------
 (use-package page-break-lines
   :diminish page-break-lines-mode
@@ -1175,7 +1179,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (use-package wgrep)
 
 ;;----------------------------------------------------------------------------
-;; Move buffers between frames
+;; move buffers between frames
 ;;----------------------------------------------------------------------------
 (use-package buffer-move
   :bind(
@@ -1198,7 +1202,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (global-set-key (kbd "C-M-<backspace>") 'kill-back-to-indentation)
 
 ;;----------------------------------------------------------------------------
-;; Borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
+;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
 ;;----------------------------------------------------------------------------
 (defun sk/split-window()
   "Split the window to see the most recent buffer in the other window.
@@ -1214,14 +1218,14 @@ Call a second time to restore the original window configuration."
 (global-set-key (kbd "<f7>") 'sk/split-window)
 
 ;;----------------------------------------------------------------------------
-;; Removes default key binding for M-left and M-right
-;; Train myself to use M-f and M-b instead
+;; removes default key binding for M-left and M-right
+;; train myself to use M-f and M-b instead
 ;;----------------------------------------------------------------------------
 (global-unset-key [M-left])
 (global-unset-key [M-right])
 
 ;;----------------------------------------------------------------------------
-;; Re-indent new open line
+;; re-indent new open line
 ;;----------------------------------------------------------------------------
 (defun open-line-with-reindent (n)
   "A version of `open-line' which reindents the start and end positions.  If there is a fill prefix and/or a `left-margin', insert them on the new line if the line avy-goto-word-or-subword-1ld have been blank.  With arg N, insert N newlines."
@@ -1250,9 +1254,13 @@ Call a second time to restore the original window configuration."
 (global-set-key (kbd "C-o") 'open-line-with-reindent)
 
 ;;----------------------------------------------------------------------------
+;; delete pairs of quotes brackets, parens, etc...
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c d p") 'delete-pair)
+
+;;----------------------------------------------------------------------------
 ;;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
