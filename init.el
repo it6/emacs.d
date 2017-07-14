@@ -139,8 +139,43 @@
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Source Code Pro")
-(setq default-frame-alist '((font . "operator mono-15")))
+(set-fontset-font "fontset-default" 'unicode "Fira Code")
+(setq default-frame-alist '((font . "Fira Code-13")))
+
+;;----------------------------------------------------------------------------
+;; ligature support for fira code
+;;----------------------------------------------------------------------------
+(when (window-system)
+  (set-default-font "Fira Code"))
+(let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
+               (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
+               (36 . ".\\(?:>\\)")
+               (37 . ".\\(?:\\(?:%%\\)\\|%\\)")
+               (38 . ".\\(?:\\(?:&&\\)\\|&\\)")
+               (42 . ".\\(?:\\(?:\\*\\*/\\)\\|\\(?:\\*[*/]\\)\\|[*/>]\\)")
+               (43 . ".\\(?:\\(?:\\+\\+\\)\\|[+>]\\)")
+               (45 . ".\\(?:\\(?:-[>-]\\|<<\\|>>\\)\\|[<>}~-]\\)")
+               (46 . ".\\(?:\\(?:\\.[.<]\\)\\|[.=-]\\)")
+               (47 . ".\\(?:\\(?:\\*\\*\\|//\\|==\\)\\|[*/=>]\\)")
+               (48 . ".\\(?:x[a-zA-Z]\\)")
+               (58 . ".\\(?:::\\|[:=]\\)")
+               (59 . ".\\(?:;;\\|;\\)")
+               (60 . ".\\(?:\\(?:!--\\)\\|\\(?:~~\\|->\\|\\$>\\|\\*>\\|\\+>\\|--\\|<[<=-]\\|=[<=>]\\||>\\)\\|[*$+~/<=>|-]\\)")
+               (61 . ".\\(?:\\(?:/=\\|:=\\|<<\\|=[=>]\\|>>\\)\\|[<=>~]\\)")
+               (62 . ".\\(?:\\(?:=>\\|>[=>-]\\)\\|[=>-]\\)")
+               (63 . ".\\(?:\\(\\?\\?\\)\\|[:=?]\\)")
+               (91 . ".\\(?:]\\)")
+               (92 . ".\\(?:\\(?:\\\\\\\\\\)\\|\\\\\\)")
+               (94 . ".\\(?:=\\)")
+               (119 . ".\\(?:ww\\)")
+               (123 . ".\\(?:-\\)")
+               (124 . ".\\(?:\\(?:|[=|]\\)\\|[=>|]\\)")
+               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)")
+               )
+             ))
+  (dolist (char-regexp alist)
+    (set-char-table-range composition-function-table (car char-regexp)
+                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
 
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
@@ -164,11 +199,6 @@
 ;;----------------------------------------------------------------------------
 (setq mac-option-modifier 'super)
 (setq mac-command-modifier 'meta)
-
-;;----------------------------------------------------------------------------
-;; enable recursive minibuffers
-;;----------------------------------------------------------------------------
-(setq enable-recursive-minibuffers t)
 
 ;;----------------------------------------------------------------------------
 ;; enable all disabled commands
@@ -201,8 +231,8 @@
 ;; use conf-unix-mode for default dot files
 ;;----------------------------------------------------------------------------
 (add-to-list 'auto-mode-alist '("\\.npmrc\\'" . conf-unix-mode))
-(add-to-list 'auto-mode-alist '("\\zshrc\\'" . sh-mode))
-(add-to-list 'auto-mode-alist '("\\zpreztorc\\'" . conf-unix-mode))
+(add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
+(add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
 
 ;;----------------------------------------------------------------------------
@@ -288,7 +318,7 @@
    (set-buffer-modified-p nil)
    (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
-(global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
+(global-set-key (kbd "C-c n r") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -299,6 +329,29 @@
 ;; increase maximum size of the mark ring
 ;;----------------------------------------------------------------------------
 (setq mark-ring-max 30)
+
+;;----------------------------------------------------------------------------
+;; ANSI Term
+;;----------------------------------------------------------------------------
+(bind-key "C-c o t" #'ansi-term)
+
+;;----------------------------------------------------------------------------
+;; ansi-term and bash settings
+;;----------------------------------------------------------------------------
+(defvar my-term-shell "/bin/bash")
+
+(defadvice ansi-term (before force-bash)
+  "Open a bash shell by default."
+  (interactive (list my-term-shell)))
+(ad-activate 'ansi-term)
+
+(defun set-no-process-query-on-exit ()
+  "Close ansi term without process running confirmation."
+  (let ((proc (get-buffer-process (current-buffer))))
+    (when (processp proc)
+      (set-process-query-on-exit-flag proc nil))))
+
+(add-hook 'term-exec-hook 'set-no-process-query-on-exit)
 
 ;;----------------------------------------------------------------------------
 ;; use spaces instead of tabs and set default tab width
@@ -317,6 +370,53 @@
 ;;----------------------------------------------------------------------------
 (setq-default initial-scratch-message
   (concat ";; Happy hacking Surya - Emacs ♥ you!\n\n"))
+
+;;----------------------------------------------------------------------------
+;; create a new scratch buffer
+;;----------------------------------------------------------------------------
+(defun modi/switch-to-scratch-and-back (&optional arg)
+  "Toggle between *scratch-MODE* buffer and the current buffer.
+If a scratch buffer does not exist, create it with the major mode set to that
+of the buffer from where this function is called.
+
+    COMMAND -> Open/switch to a scratch buffer in the current buffer's major mode
+    C-0 COMMAND -> Open/switch to a scratch buffer in `fundamental-mode'
+    C-1 COMMAND -> Open/switch to a scratch buffer in `js-mode'
+    C-2 COMMAND -> Open/switch to a scratch buffer in `json-mode'
+    C-3 COMMAND -> Open/switch to a scratch buffer in `typescript-mode'
+    C-u COMMAND -> Open/switch to a scratch buffer in `org-mode'
+C-u C-u COMMAND -> Open/switch to a scratch buffer in `emacs-elisp-mode'
+
+Even if the current major mode is a read-only mode (derived from `special-mode'
+or `dired-mode'), we would want to be able to write in the scratch buffer. So
+the scratch major mode is set to `org-mode' for such cases.
+
+Return the scratch buffer opened."
+  (interactive "p")
+  (if (and (or (null arg)               ; no prefix
+               (= arg 1))
+           (string-match-p "\\*scratch" (buffer-name)))
+      (switch-to-buffer (other-buffer))
+    (let* ((mode-str (cl-case arg
+                       (0  "fundamental-mode") ; C-0
+                       (1  "js-mode") ; C-1
+                       (2  "json-mode") ; C-2
+                       (3  "typescript-mode") ; C-3
+                       (4  "org-mode") ; C-u
+                       (16 "emacs-lisp-mode") ; C-u C-u
+                       ;; If the major mode turns out to be a `special-mode'
+                       ;; derived mode, a read-only mode like `help-mode', open
+                       ;; an `org-mode' scratch buffer instead.
+                       (t (if (or (derived-mode-p 'special-mode) ; no prefix
+                                  (derived-mode-p 'dired-mode))
+                              "org-mode"
+                            (format "%s" major-mode)))))
+           (buf (get-buffer-create (concat "*scratch-" mode-str "*"))))
+      (switch-to-buffer buf)
+      (funcall (intern mode-str))   ; http://stackoverflow.com/a/7539787/1219634
+      buf)))
+
+(global-set-key (kbd "C-c n b") 'modi/switch-to-scratch-and-back)
 
 ;;----------------------------------------------------------------------------
 ;; maximize emacs window on load
@@ -339,7 +439,7 @@ Don't mess with special buffers."
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
   (kill-buffer buffer)))
-    (message "「Closed all other buffers」")))
+    (message "Closed all other buffers")))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
 
@@ -361,10 +461,10 @@ If `universal-argument' is called first, copy only the dir path"
     (kill-new
      (if *dir-path-only-p
    (progn
-     (message "Directory path copied: 「%s」" (file-name-directory -fpath))
+     (message "Directory path copied: %s" (file-name-directory -fpath))
      (file-name-directory -fpath))
        (progn
-   (message "File path copied: 「%s」" -fpath)
+   (message "File path copied: %s" -fpath)
    -fpath )))))
 
 (global-set-key (kbd "C-c c f") 'surya-copy-file-path)
@@ -382,7 +482,7 @@ Result is full path."
    (progn
      (kill-new
      (file-name-directory -fpath))
-     (message "Directory path copied: 「%s」" (file-name-directory -fpath)))))
+     (message "Directory path copied: %s" (file-name-directory -fpath)))))
 
 (global-set-key (kbd "C-c c d") 'surya-copy-directory-path)
 
@@ -402,10 +502,10 @@ If not in a Git repo, uses the current directory."
   (if (git-root-dir)
       (progn
         (kill-new (git-root-dir))
-        (message "GIT root path copied:「%s」" (git-root-dir)))
+        (message "GIT root path copied:%s" (git-root-dir)))
     (progn
       (kill-new default-directory)
-      (message "File not in GIT repo, copied default path:「%s」" default-directory))))
+      (message "File not in GIT repo, copied default path:%s" default-directory))))
 
 (global-set-key (kbd "C-c c v") 'git-root-path)
 
@@ -423,87 +523,6 @@ If not in a Git repo, uses the current directory."
   :ensure t
   :bind (([remap zap-to-char] . zop-to-char)
          ("M-Z" . zop-up-to-char)))
-
-;;----------------------------------------------------------------------------
-;; delete upto camel case or sub words
-;;----------------------------------------------------------------------------
-(defconst camelCase-regexp "\\([A-Z]?[a-z]+\\|[A-Z]+\\|[0-9]+\\)"
-  ;; capital must be before uppercase
-  "Regular expression that matches a camelCase word.
-defined as Capitalized, lowercase, or UPPERCASE sequence of letters,
-or sequence of digits.")
-
-(defun camelCase-forward-word (count)
-  "Move point foward COUNT camelCase words."
-  (interactive "p")
-  ;; search forward increments point until some match occurs;
-  ;; extent of match is as large as possible at that point.
-  ;; point is left at END of match.
-  (if (< count 0)
-      (camelCase-backward-word (- count))
-    (let ((old-case-fold-search case-fold-search)
-    (case-fold-search nil)) ;; search case sensitively
-      (unwind-protect
-    (when (re-search-forward camelCase-regexp nil t count)
-      ;; something matched, just check for special case.
-      ;; If uppercase acronym is in camelCase word as in "URLNext",
-      ;; search will leave point after N rather than after L.
-      ;; So if match starting back one char doesn't end same place,
-      ;; then back-up one char.
-      (when (save-excursion
-  (let ((search-end (point)))
-    (forward-char -1)
-    (and (looking-at camelCase-regexp)
-   (not (= search-end (match-end 0))))))
-  (forward-char -1))
-      (point))
-  (setq case-fold-search old-case-fold-search)))))
-
-(defun camelCase-backward-word (count)
-  "Move point backward COUNT camelCase words."
-  (interactive "p")
-  ;; search backward decrements point until some match occurs;
-  ;; extent of match is as large as possible at that point.
-  ;; So once point is found, have to keep decrementing point until we cross
-  ;; into another word, which changes the match end.
-  ;; for multiple words, have to do whole thing COUNT times.
-  (if (< count 0)
-      (camelCase-forward-word (- count))
-    (let ((start-position (point))
-    (old-case-fold-search case-fold-search)
-    (case-fold-search nil)) ;; search case-sensitively
-      (unwind-protect
-    (while (< 0 count)
-      (setq count (1- count))
-      (let ((start (point)))
-  (when (re-search-backward camelCase-regexp nil t)
-    (let ((end-word (match-end 0)))
-      (forward-char -1)
-      (while (save-excursion
-   ;;like looking-at, but stop match at start
-   (let ((position (point)))
-     (re-search-forward camelCase-regexp start t)
-     (and (= position (match-beginning 0))
-    (= end-word (match-end 0)))))
-  (forward-char -1))
-      (forward-char 1)))))
-  (setq case-fold-search old-case-fold-search))
-      (if (= start-position (point)) nil (point)))))
-
-(defun camelCase-forward-kill-word (count)
-  "Kill text between current point and end of next camelCase word.
-COUNT will take an argument"
-  (interactive "*p")
-  (kill-region (point) (progn (camelCase-forward-word count) (point))))
-
-(defun camelCase-backward-kill-word (count)
-  "Kill text between current point and end of previous camelCase word.
-COUNT will take an argument"
-  (interactive "*p")
-  (kill-region (point) (progn (camelCase-backward-word count) (point))))
-
-(global-set-key (kbd "C-c <backspace>") 'camelCase-forward-kill-word)
-(global-set-key (kbd "<C-backspace>") 'camelCase-backward-kill-word)
 
 ;;----------------------------------------------------------------------------
 ;; toggle between all open buffers quickly
@@ -587,11 +606,6 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; browse url of file from emacs opens in default browser
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c o b") 'browse-url-of-file)
-
-;;----------------------------------------------------------------------------
-;; ANSI Term
-;;----------------------------------------------------------------------------
-(bind-key "C-c o t" #'ansi-term)
 
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
@@ -715,16 +729,6 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq hs-isearch-open t))
 
 ;;----------------------------------------------------------------------------
-;; show indent guides
-;;----------------------------------------------------------------------------
-(use-package indent-guide
-  :diminish indent-guide-mode
-  :config
-  (add-hook 'prog-mode-hook 'indent-guide-mode)
-  (setq indent-guide-char "¦"))
-  ;; (setq indent-guide-char "┊┆ ⁞, ⋮, ┆, ┊, ┋, ┇, ︙, │, ┆,│, ┊, ┆, ¦"))
-
-;;----------------------------------------------------------------------------
 ;; expand region
 ;;----------------------------------------------------------------------------
 (use-package expand-region
@@ -781,45 +785,6 @@ kill it (unless it's modified).  Optional argument AGGR."
      (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
 
 ;;----------------------------------------------------------------------------
-;; use letters in circles as mode names to reduce clutter
-;;----------------------------------------------------------------------------
-(add-hook 'js-mode-hook
-  (lambda()
-    (setq mode-name "Ⓙ")))
-
-(add-hook 'c-mode-hook
-  (lambda()
-    (setq mode-name "Ⓒ")))
-
-(add-hook 'json-mode-hook
-  (lambda()
-    (setq mode-name "Ⓙ")))
-
-(add-hook 'sgml-mode-hook
-  (lambda()
-    (setq mode-name "Ⓗ")))
-
-(add-hook 'css-mode-hook
-  (lambda()
-    (setq mode-name "Ⓒ")))
-
-(add-hook 'less-css-mode-hook
-  (lambda()
-    (setq mode-name "Ⓛ")))
-
-(add-hook 'scss-mode-hook
-  (lambda()
-    (setq mode-name "Ⓢ")))
-
-(add-hook 'feature-mode-hook
-  (lambda()
-    (setq mode-name "Ⓕ")))
-
-(add-hook 'emacs-lisp-mode-hook
-  (lambda()
-    (setq mode-name "Ⓔ")))
-
-;;----------------------------------------------------------------------------
 ;; enable web beautify mode for js, css, html
 ;;----------------------------------------------------------------------------
 (use-package web-beautify)
@@ -842,6 +807,13 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
   :bind ("C-c p" . prettier-js))
+
+;;----------------------------------------------------------------------------
+;; use js-mode for react jsx and disable flycheck
+;;----------------------------------------------------------------------------
+(add-to-list 'auto-mode-alist '("\\.jsx\\'" . (lambda ()
+                               (js-mode)
+                               (flycheck-mode -1))))
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
@@ -889,11 +861,11 @@ kill it (unless it's modified).  Optional argument AGGR."
 (use-package yasnippet
   :diminish yas-minor-mode
   :ensure t
-  :commands yas-global-mode
   :init
-  ;; we don't want yasnippet running in terminals
+  (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
-                              (yas-minor-mode -1))))
+                              (yas-minor-mode -1)))
+  :config (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
 ;; enable global electric-indent-mode
@@ -905,29 +877,12 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (electric-pair-mode t)
 
-;;----------------------------------------------------------------------------
-;; use company mode
-;;----------------------------------------------------------------------------
-(use-package company
-  :diminish company-mode)
-; aligns annotation to the right hand side
-(setq company-tooltip-align-annotations t)
-
 ;; ----------------------------------------------------------------------------
 ;; Use less-css-mode
 ;; Activate company mode css hints for less mode
 ;; Set less indentation to two spaces
 ;; ----------------------------------------------------------------------------
 (use-package less-css-mode)
-(add-hook 'less-css-mode-hook
-    (lambda ()
-      (company-mode +1)
-      (set (make-local-variable 'company-backends) '(company-css))))
-
-(add-hook 'css-mode-hook
-    (lambda ()
-      (company-mode +1)
-      (set (make-local-variable 'company-backends) '(company-css))))
 
 ;;----------------------------------------------------------------------------
 ;; use undo-tree
@@ -949,20 +904,19 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (use-package avy
   :bind
-  ("C-:" . avy-goto-char)
-  ("C-;" . avy-goto-subword-1))
+  ("C-;" . avy-goto-char))
+  ;; ("C-:" . avy-goto-subword-1))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
 ;;----------------------------------------------------------------------------
 (use-package flycheck
-  :diminish(flycheck-mode "ⓕ")
   :config
   (global-flycheck-mode)
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
 
 ;;----------------------------------------------------------------------------
-;; load eslint from local node_modules when possible
+;; load eslint,tslint from local node_modules when possible
 ;;----------------------------------------------------------------------------
 (defun use-eslint-from-node-modules ()
   "Load eslint from local node_modules if available."
@@ -977,6 +931,21 @@ kill it (unless it's modified).  Optional argument AGGR."
 
 (add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
 
+(defun use-tslint-from-node-modules ()
+  "Load tslint from local node_modules if available."
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (tslint (and root
+                      (expand-file-name (if (eq system-type 'windows-nt)
+                                            "node_modules/.bin/tslint.cmd"
+                                          "node_modules/.bin/tslint")
+                                        root))))
+    (when (and tslint (file-executable-p tslint))
+      (setq-local flycheck-typescript-tslint-executable tslint))))
+
+(add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
+
 ;;----------------------------------------------------------------------------
 ;; set typescript mode
 ;;----------------------------------------------------------------------------
@@ -985,22 +954,20 @@ kill it (unless it's modified).  Optional argument AGGR."
   (interactive)
   (tide-setup)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
-  (eldoc-mode +1)
-  (company-mode +1)
   (tide-hl-identifier-mode +1))
 
 (use-package tide
- :config
+  :diminish tide-mode
+  :config
  (define-key tide-mode-map (kbd "C-c b") 'tide-format))
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
+;; (setq tide-tsserver-process-environment '("TSS_LOG=-level verbose -file /tmp/tss.log"))
+
 ;;----------------------------------------------------------------------------
 ;; use diff-hl  mode
 ;;----------------------------------------------------------------------------
-;; (use-package diff-hl)
-;; (global-diff-hl-mode)
-
 (use-package diff-hl
   :ensure t
   :commands global-diff-hl-mode
@@ -1054,7 +1021,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   (setq counsel-find-file-at-point t))
 
 (use-package ivy
-  :diminish (ivy-mode "ⓘ")
+  :diminish ivy-mode
   :init
   (setq ivy-use-virtual-buffers t)
   (setq ivy-count-format "(%d/%d) ")
@@ -1259,9 +1226,8 @@ Call a second time to restore the original window configuration."
 (global-set-key (kbd "C-c d p") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
-;;; experimental settings - try them before adding to init.el
+;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
