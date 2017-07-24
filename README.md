@@ -1,2 +1,2 @@
-# emacs.d
-My emacs config.
+# dot files
+My dot files.
