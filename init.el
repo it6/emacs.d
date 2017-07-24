@@ -71,15 +71,17 @@
 ;;----------------------------------------------------------------------------
 ;; set path on mac
 ;;----------------------------------------------------------------------------
-(use-package exec-path-from-shell)
-(when (memq window-system '(mac ns))
+(use-package exec-path-from-shell
+  :config
   (exec-path-from-shell-initialize))
+;; can't run this from emacsclient
+;; (when (memq window-system '(mac ns))
+;;   (exec-path-from-shell-initialize))
 
 ;;----------------------------------------------------------------------------
 ;; suppress some GUI features
 ;;----------------------------------------------------------------------------
 (setq use-file-dialog nil)
-(setq use-dialog-box nil)
 (setq inhibit-startup-screen t)
 (setq inhibit-startup-echo-area-message t)
 
@@ -93,6 +95,28 @@
 (when (fboundp 'menu-bar-mode)
   (menu-bar-mode -1))
 
+;; need this to hide scroll-bars in emacsclient mode
+;; (defun my/disable-scroll-bars (frame)
+;;   "Disable scroll bars in FRAME for emacsclient."
+;;   (modify-frame-parameters frame
+;;                            '((vertical-scroll-bars . nil)
+;;                              (horizontal-scroll-bars . nil))))
+;; (add-hook 'after-make-frame-functions 'my/disable-scroll-bars)
+
+;; ----------------------------------------------------------------------------
+;; define function to shutdown emacs server instance
+;; ----------------------------------------------------------------------------
+(defun server-shutdown ()
+  "Save buffers, Quit, and Shutdown (kill) server."
+  (interactive)
+  (save-some-buffers)
+  (kill-emacs))
+
+;; ----------------------------------------------------------------------------
+;;
+;; ----------------------------------------------------------------------------
+
+
 ;; ----------------------------------------------------------------------------
 ;; some basic preferences
 ;; ----------------------------------------------------------------------------
@@ -101,12 +125,10 @@
  bookmark-default-file (locate-user-emacs-file "cache/bookmarks-items")
  bookmark-save-flag 1
  buffers-menu-max-size 30
- column-number-mode t
  delete-selection-mode t
  ediff-split-window-function 'split-window-horizontally
  ediff-window-setup-function 'ediff-setup-windows-plain
  scroll-preserve-screen-position 'always
- set-mark-command-repeat-pop t
  tooltip-delay 1.5
  truncate-lines nil
  truncate-partial-width-windows nil)
@@ -120,11 +142,19 @@
       (buffer-name)
       (cond
        (buffer-file-truename
-        (concat " ▓ " (abbreviate-file-name default-directory)))
+        (concat "« " (abbreviate-file-name default-directory) " »"))
        (dired-directory
-        (concat " ▓ " dired-directory))
+        (concat "« " dired-directory " »"))
        (t
-        " ▓ no file")))))
+        "« no file »")))))
+
+;; ▓
+
+;;----------------------------------------------------------------------------
+;; don't use ls command for dired mode
+;;----------------------------------------------------------------------------
+(when (string= system-type "darwin")
+  (setq dired-use-ls-dired nil))
 
 ;;----------------------------------------------------------------------------
 ;; set default directory for cache
@@ -331,9 +361,9 @@
 (setq mark-ring-max 30)
 
 ;;----------------------------------------------------------------------------
-;; ANSI Term
+;; Repeat mark popping
 ;;----------------------------------------------------------------------------
-(bind-key "C-c o t" #'ansi-term)
+(setq set-mark-command-repeat-pop t)
 
 ;;----------------------------------------------------------------------------
 ;; ansi-term and bash settings
@@ -360,69 +390,74 @@
 (setq-default tab-width 2)
 
 ;;----------------------------------------------------------------------------
+;; Show column number and buffer size on the mode line
+;;----------------------------------------------------------------------------
+(column-number-mode)
+(size-indication-mode)
+
+;;----------------------------------------------------------------------------
+;; delete selection when pasting text
+;;----------------------------------------------------------------------------
+(delete-selection-mode 1)
+
+;;----------------------------------------------------------------------------
+;; Show unfinished keystrokes early
+;;----------------------------------------------------------------------------
+(setq echo-keystrokes 0.01)
+
+;;----------------------------------------------------------------------------
+;; Indicate buffer boundaries and empty lines
+;;----------------------------------------------------------------------------
+;; (setq-default indicate-buffer-boundaries 'left)
+(setq-default indicate-empty-lines t)
+
+;;----------------------------------------------------------------------------
+;; Don't use dialogs for minibuffer input
+;;----------------------------------------------------------------------------
+(setq use-dialog-box nil)
+
+;;----------------------------------------------------------------------------
+;; Use spaces instead of tabs and set default tab width
+;;----------------------------------------------------------------------------
+(setq-default indent-tabs-mode nil)
+(setq-default tab-width 4)
+
+;;----------------------------------------------------------------------------
 ;; ignore case on completion
 ;;----------------------------------------------------------------------------
 (setq read-file-name-completion-ignore-case t)
 (setq read-buffer-completion-ignore-case t)
 
 ;;----------------------------------------------------------------------------
-;; emacs initial scratch message
+;; emacs initial scratch buffer message
 ;;----------------------------------------------------------------------------
-(setq-default initial-scratch-message
-  (concat ";; Happy hacking Surya - Emacs ♥ you!\n\n"))
+(setq-default initial-scratch-message "")
 
 ;;----------------------------------------------------------------------------
-;; create a new scratch buffer
+;; set scratch buffer to js-mode and never kill it
 ;;----------------------------------------------------------------------------
-(defun modi/switch-to-scratch-and-back (&optional arg)
-  "Toggle between *scratch-MODE* buffer and the current buffer.
-If a scratch buffer does not exist, create it with the major mode set to that
-of the buffer from where this function is called.
+(setq initial-major-mode 'js-mode)
 
-    COMMAND -> Open/switch to a scratch buffer in the current buffer's major mode
-    C-0 COMMAND -> Open/switch to a scratch buffer in `fundamental-mode'
-    C-1 COMMAND -> Open/switch to a scratch buffer in `js-mode'
-    C-2 COMMAND -> Open/switch to a scratch buffer in `json-mode'
-    C-3 COMMAND -> Open/switch to a scratch buffer in `typescript-mode'
-    C-u COMMAND -> Open/switch to a scratch buffer in `org-mode'
-C-u C-u COMMAND -> Open/switch to a scratch buffer in `emacs-elisp-mode'
+(defun unkillable-scratch-buffer ()
+  "Don't kill scratch buffer."
+    (if (or (equal (buffer-name (current-buffer)) "*scratch*") (equal (buffer-name (current-buffer)) "*Messages*"))
+        (progn nil) t))
 
-Even if the current major mode is a read-only mode (derived from `special-mode'
-or `dired-mode'), we would want to be able to write in the scratch buffer. So
-the scratch major mode is set to `org-mode' for such cases.
+(add-hook 'kill-buffer-query-functions 'unkillable-scratch-buffer)
 
-Return the scratch buffer opened."
-  (interactive "p")
-  (if (and (or (null arg)               ; no prefix
-               (= arg 1))
-           (string-match-p "\\*scratch" (buffer-name)))
-      (switch-to-buffer (other-buffer))
-    (let* ((mode-str (cl-case arg
-                       (0  "fundamental-mode") ; C-0
-                       (1  "js-mode") ; C-1
-                       (2  "json-mode") ; C-2
-                       (3  "typescript-mode") ; C-3
-                       (4  "org-mode") ; C-u
-                       (16 "emacs-lisp-mode") ; C-u C-u
-                       ;; If the major mode turns out to be a `special-mode'
-                       ;; derived mode, a read-only mode like `help-mode', open
-                       ;; an `org-mode' scratch buffer instead.
-                       (t (if (or (derived-mode-p 'special-mode) ; no prefix
-                                  (derived-mode-p 'dired-mode))
-                              "org-mode"
-                            (format "%s" major-mode)))))
-           (buf (get-buffer-create (concat "*scratch-" mode-str "*"))))
-      (switch-to-buffer buf)
-      (funcall (intern mode-str))   ; http://stackoverflow.com/a/7539787/1219634
-      buf)))
-
-(global-set-key (kbd "C-c n b") 'modi/switch-to-scratch-and-back)
+;;----------------------------------------------------------------------------
+;; Forces the messages to 0, and kills the *Messages* buffer
+;; Keep the messages buffer to see helpful logs
+;;----------------------------------------------------------------------------
+;; (setq-default message-log-max nil)
+;; (kill-buffer "*Messages*")
 
 ;;----------------------------------------------------------------------------
 ;; maximize emacs window on load
 ;;----------------------------------------------------------------------------
 (setq frame-resize-pixelwise t)
-(add-hook 'window-setup-hook 'toggle-frame-maximized t)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+;; (add-hook 'window-setup-hook 'toggle-frame-maximized t)
 
 ;;----------------------------------------------------------------------------
 ;; kill all other open buffers except the current one
@@ -525,25 +560,6 @@ If not in a Git repo, uses the current directory."
          ("M-Z" . zop-up-to-char)))
 
 ;;----------------------------------------------------------------------------
-;; toggle between all open buffers quickly
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-`") 'switch-bury-or-kill-buffer)
-
-(defun switch-bury-or-kill-buffer (&optional aggr)
-  "With no argument, switch (but unlike `C-x b', without the need to confirm).
-With `C-u', bury current buffer.  With double `C-u',
-kill it (unless it's modified).  Optional argument AGGR."
-  (interactive "P")
-  (cond
-   ((eq aggr nil) (progn
-        (cl-dolist (buf '("*Buffer List*" "*IBuffer*"))
-          (when (get-buffer buf)
-      (bury-buffer buf)))
-        (switch-to-buffer (other-buffer))))
-   ((equal aggr '(4)) (bury-buffer))
-   ((equal aggr '(16)) (kill-buffer-if-not-modified (current-buffer)))))
-
-;;----------------------------------------------------------------------------
 ;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
 ;;----------------------------------------------------------------------------
 (defun backward-up-sexp (arg)
@@ -598,6 +614,36 @@ kill it (unless it's modified).  Optional argument AGGR."
 (global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
 
 ;;----------------------------------------------------------------------------
+;; launch macos terminal from emacs
+;;----------------------------------------------------------------------------
+(defun surya/open-Terminal-here ()
+  "Launch terminal from the current file location."
+    (interactive)
+    (shell-command
+     (concat "open -a Terminal "
+             (shell-quote-argument (expand-file-name
+                                    default-directory))) nil nil))
+
+(bind-key "C-c o t" 'surya/open-Terminal-here)
+
+;;----------------------------------------------------------------------------
+;; winner mode for saving windows layouts and toggle between them
+;;----------------------------------------------------------------------------
+;; Undo and redo the window configuration
+(use-package winner
+  :bind (:map winner-mode-map
+              ("C-c w u" . winner-undo)
+              ("C-c w r" . winner-redo))
+  :commands winner-mode
+  :init
+  (winner-mode)
+  :config
+  ;; Disable conflicting key bindings
+  (unbind-key "C-c <left>" winner-mode-map)
+  (unbind-key "C-c <right>" winner-mode-map))
+
+
+;;----------------------------------------------------------------------------
 ;; change all prompts to y or n
 ;;----------------------------------------------------------------------------
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -616,28 +662,6 @@ kill it (unless it's modified).  Optional argument AGGR."
   (shell-command (concat "open -R " buffer-file-name)))
 
 (global-set-key (kbd "C-c o f") 'reveal-in-finder)
-
-;;----------------------------------------------------------------------------
-;; enable Dash Help
-;; support for the http://kapeli.com/dash documentation browser
-;;----------------------------------------------------------------------------
-(defconst *is-a-mac* (eq system-type 'darwin))
-(defun sanityinc/dash-installed-p ()
-  "Return t if Dash is installed on this machine, or nil otherwise."
-  (let ((lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"))
-    (and (file-executable-p lsregister)
-         (not (string-equal
-               ""
-               (shell-command-to-string
-                (concat lsregister " -dump|grep com.kapeli.dash")))))))
-
-(when (and *is-a-mac* (not (package-installed-p 'dash-at-point)))
-  (message "Checking whether Dash is installed")
-  (when (sanityinc/dash-installed-p)
-    (use-package dash-at-point)))
-
-(when (package-installed-p 'dash-at-point)
-  (global-set-key (kbd "C-c o d") 'dash-at-point))
 
 ;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
@@ -717,16 +741,47 @@ kill it (unless it's modified).  Optional argument AGGR."
                   python-mode-hook))
     (add-hook hook #'hs-minor-mode))
   :config
-  (defun drot|display-code-line-counts (ov)
-    "Unique overlay function to be applied with `hs-minor-mode'."
-    (when (eq 'code (overlay-get ov 'hs))
-      (overlay-put ov 'display
-                   (format "<---> | %d"
-                           (count-lines (overlay-start ov)
-                                        (overlay-end ov))))))
-  ;; Unfold when search is active and apply custom overlay
-  (setq hs-set-up-overlay #'drot|display-code-line-counts)
+  ;; Unfold when search is active
   (setq hs-isearch-open t))
+
+;;----------------------------------------------------------------------------
+;; don't show some minor modes
+;;----------------------------------------------------------------------------
+(use-package diminish
+  :config
+  (eval-after-load "hideshow" '(diminish 'hs-minor-mode))
+  (eval-after-load "orgtbl-mode-hook" '(diminish 'orgtbl-mode))
+  (eval-after-load "autorevert" '(diminish 'auto-revert-mode))
+  (eval-after-load "abbrev-mode-hook" '(diminish 'abbrev-mode)))
+
+;;----------------------------------------------------------------------------
+;; use rust mode
+;;----------------------------------------------------------------------------
+(use-package rust-mode
+  :mode "\\.rs\\'"
+  :config
+  (setq rust-format-on-save t)
+  (add-hook 'rust-mode-hook
+            (lambda ()
+              (local-set-key (kbd "C-c b") #'rust-format-buffer))))
+
+;;----------------------------------------------------------------------------
+;; compile rust file and display output in mini buffer
+;;----------------------------------------------------------------------------
+(defun rust-save-compile-and-run ()
+  "Run and compile rust code."
+  (interactive)
+  (save-buffer)
+  (if (locate-dominating-file (buffer-file-name) "Cargo.toml")
+      (compile "cargo run")
+    (shell-command
+     (format "rustc %s && %s"
+         (buffer-file-name)
+         (file-name-sans-extension (buffer-file-name))))))
+
+(add-hook 'rust-mode-hook
+      (lambda ()
+        (define-key rust-mode-map (kbd "C-c e") 'rust-save-compile-and-run)))
 
 ;;----------------------------------------------------------------------------
 ;; expand region
@@ -762,7 +817,6 @@ kill it (unless it's modified).  Optional argument AGGR."
 (use-package multiple-cursors
   :bind (("C-<" . mc/mark-previous-like-this)
     ("C->" . mc/mark-next-like-this)
-    ("C-+" . mc/mark-next-like-this)
     ("C-c C-<" . mc/mark-all-like-this)
     ("C-c m r" . set-rectangular-region-anchor)
     ("C-c m c" . mc/edit-lines)
@@ -770,7 +824,7 @@ kill it (unless it's modified).  Optional argument AGGR."
     ("C-c m a" . mc/edit-beginnings-of-lines)))
 
 ;;----------------------------------------------------------------------------
-;; javascript file build with node and show output
+;; add js, html, json and css mode maps after compiling
 ;;----------------------------------------------------------------------------
 (eval-when-compile
   (progn
@@ -779,6 +833,9 @@ kill it (unless it's modified).  Optional argument AGGR."
          (defvar html-mode-map)
          (defvar css-mode-map)))
 
+;;----------------------------------------------------------------------------
+;; javascript file build with node and show output
+;;----------------------------------------------------------------------------
 (eval-after-load 'js
   (lambda()
      (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
@@ -862,6 +919,7 @@ kill it (unless it's modified).  Optional argument AGGR."
   :diminish yas-minor-mode
   :ensure t
   :init
+  (add-hook 'sgml-mode-hook #'yas-minor-mode)
   (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
@@ -873,7 +931,7 @@ kill it (unless it's modified).  Optional argument AGGR."
 (electric-indent-mode t)
 
 ;;----------------------------------------------------------------------------
-;; auto generate closing brackets globally
+;; auto generate closing brackets globally using Electric pair mode
 ;;----------------------------------------------------------------------------
 (electric-pair-mode t)
 
@@ -904,8 +962,8 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;;----------------------------------------------------------------------------
 (use-package avy
   :bind
-  ("C-;" . avy-goto-char))
-  ;; ("C-:" . avy-goto-subword-1))
+  ("C-;" . avy-goto-char)
+  ("C-:" . avy-goto-subword-1))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -987,8 +1045,12 @@ kill it (unless it's modified).  Optional argument AGGR."
 ;; show matching parens
 ;; highlight matching parentheses
 ;;----------------------------------------------------------------------------
-(show-paren-mode 1)
-(setq show-paren-when-point-inside-paren t)
+(use-package paren
+  :config
+  (setq show-paren-delay 0)
+  (setq show-paren-when-point-inside-paren t)
+  (setq show-paren-when-point-in-periphery t)
+  (show-paren-mode))
 
 ;;----------------------------------------------------------------------------
 ;; magit status
@@ -1003,6 +1065,7 @@ kill it (unless it's modified).  Optional argument AGGR."
          ("C-c v b" . magit-blame)
          ("C-c v l" . magit-log-buffer-file)
          ("C-c v p" . magit-pull)))
+
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
@@ -1110,17 +1173,6 @@ kill it (unless it's modified).  Optional argument AGGR."
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
 (global-set-key (kbd "<f5>") 'revert-buffer)
-
-;;----------------------------------------------------------------------------
-;; don't show some minor modes
-;;----------------------------------------------------------------------------
-(diminish 'auto-revert-mode)
-(add-hook 'orgtbl-mode-hook
-          '(lambda ()
-             (diminish 'orgtbl-mode)))
-(add-hook 'abbrev-mode-hook
-          '(lambda ()
-             (diminish 'abbrev-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; C-x ;, C-x : to comment/uncomment current line
