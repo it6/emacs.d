@@ -36,6 +36,11 @@
 (setq switch-to-buffer-preserve-window-point t)
 
 ;;----------------------------------------------------------------------------
+;; Prompt for buffer switch in strongly dedicated windows
+;;----------------------------------------------------------------------------
+(setq switch-to-buffer-in-dedicated-window 'prompt)
+
+;;----------------------------------------------------------------------------
 ;; do not save duplicates in history and kill ring
 ;;----------------------------------------------------------------------------
 (setq history-delete-duplicates t)
@@ -74,9 +79,6 @@
 (use-package exec-path-from-shell
   :config
   (exec-path-from-shell-initialize))
-;; can't run this from emacsclient
-;; (when (memq window-system '(mac ns))
-;;   (exec-path-from-shell-initialize))
 
 ;;----------------------------------------------------------------------------
 ;; suppress some GUI features
@@ -94,28 +96,6 @@
   (set-scroll-bar-mode nil))
 (when (fboundp 'menu-bar-mode)
   (menu-bar-mode -1))
-
-;; need this to hide scroll-bars in emacsclient mode
-;; (defun my/disable-scroll-bars (frame)
-;;   "Disable scroll bars in FRAME for emacsclient."
-;;   (modify-frame-parameters frame
-;;                            '((vertical-scroll-bars . nil)
-;;                              (horizontal-scroll-bars . nil))))
-;; (add-hook 'after-make-frame-functions 'my/disable-scroll-bars)
-
-;; ----------------------------------------------------------------------------
-;; define function to shutdown emacs server instance
-;; ----------------------------------------------------------------------------
-(defun server-shutdown ()
-  "Save buffers, Quit, and Shutdown (kill) server."
-  (interactive)
-  (save-some-buffers)
-  (kill-emacs))
-
-;; ----------------------------------------------------------------------------
-;;
-;; ----------------------------------------------------------------------------
-
 
 ;; ----------------------------------------------------------------------------
 ;; some basic preferences
@@ -137,16 +117,16 @@
 ;; show file path in frame title
 ;;----------------------------------------------------------------------------
 (setq-default frame-title-format
-        '(:eval
-    (format "%s  %s"
-      (buffer-name)
-      (cond
-       (buffer-file-truename
-        (concat "« " (abbreviate-file-name default-directory) " »"))
-       (dired-directory
-        (concat "« " dired-directory " »"))
-       (t
-        "« no file »")))))
+              '(:eval
+                (format "%s  %s"
+                        (buffer-name)
+                        (cond
+                         (buffer-file-truename
+                          (concat "« " (abbreviate-file-name default-directory) " »"))
+                         (dired-directory
+                          (concat "« " dired-directory " »"))
+                         (t
+                          "« no file »")))))
 
 ;; ▓
 
@@ -155,6 +135,7 @@
 ;;----------------------------------------------------------------------------
 (when (string= system-type "darwin")
   (setq dired-use-ls-dired nil))
+
 
 ;;----------------------------------------------------------------------------
 ;; set default directory for cache
@@ -176,7 +157,7 @@
 ;; ligature support for fira code
 ;;----------------------------------------------------------------------------
 (when (window-system)
-  (set-default-font "Fira Code"))
+  (set-frame-font "Fira Code"))
 (let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
                (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
                (36 . ".\\(?:>\\)")
@@ -200,9 +181,8 @@
                (119 . ".\\(?:ww\\)")
                (123 . ".\\(?:-\\)")
                (124 . ".\\(?:\\(?:|[=|]\\)\\|[=>|]\\)")
-               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)")
-               )
-             ))
+               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)"))))
+
   (dolist (char-regexp alist)
     (set-char-table-range composition-function-table (car char-regexp)
                           `([,(cdr char-regexp) 0 font-shape-gstring]))))
@@ -243,9 +223,9 @@
 ;;----------------------------------------------------------------------------
 ;; set indent/tab width to 2 spaces
 ;;----------------------------------------------------------------------------
-(setq css-indent-offset 2)
-(setq typescript-indent-level 2)
-(setq js-indent-level 2)
+(defvar css-indent-offset 2)
+(defvar typescript-indent-level 2)
+(defvar js-indent-level 2)
 
 ;;----------------------------------------------------------------------------
 ;; cleanup whitespace before saving a file
@@ -258,70 +238,31 @@
 (setq x-stretch-cursor t)
 
 ;;----------------------------------------------------------------------------
+;; remove vc-mode from modeline
+;; magit is powerful and I don't need branch name in mode line
+;; https://magit.vc/manual/magit/The-mode_002dline-information-isn_0027t-always-up_002dto_002ddate.html
+;;----------------------------------------------------------------------------
+(setq-default mode-line-format
+              '("%e" mode-line-front-space mode-line-mule-info mode-line-client mode-line-modified mode-line-remote mode-line-frame-identification mode-line-buffer-identification "   " mode-line-position
+                ;; (vc-mode vc-mode)
+                "  " mode-line-modes mode-line-misc-info mode-line-end-spaces))
+
+;;----------------------------------------------------------------------------
+;; Use Ibuffer for Buffer List
+;;----------------------------------------------------------------------------
+(use-package ibuffer
+  :defer t
+  :bind ([remap list-buffers] . ibuffer)
+  :config
+  (setq ibuffer-default-sorting-mode 'major-mode))
+
+;;----------------------------------------------------------------------------
 ;; use conf-unix-mode for default dot files
 ;;----------------------------------------------------------------------------
 (add-to-list 'auto-mode-alist '("\\.npmrc\\'" . conf-unix-mode))
 (add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
-
-;;----------------------------------------------------------------------------
-;; Use Ibuffer for buffer list
-;; use ibuffer instead of the default buffer list
-;; Turning off ibuffer-show-empty-filter-groups is particularly useful,
-;; because the empty filter groups can really clutter things up.
-;;----------------------------------------------------------------------------
-(use-package ibuffer-vc)
-
-(defun ibuffer-set-up-preferred-filters ()
-  "Set up filters for showing ibuffer."
-  (ibuffer-vc-set-filter-groups-by-vc-root)
-  (unless (eq ibuffer-sorting-mode 'filename/process)
-    (ibuffer-do-sort-by-filename/process)))
-
-(add-hook 'ibuffer-hook 'ibuffer-set-up-preferred-filters)
-
-(setq-default ibuffer-show-empty-filter-groups nil)
-
-
-(eval-after-load 'ibuffer
-  ;; Use human readable Size column instead of original one
-  (define-ibuffer-column size-h
-    (:name "Size" :inline t)
-    (cond
-     ((> (buffer-size) 1000000) (format "%7.1fM" (/ (buffer-size) 1000000.0)))
-     ((> (buffer-size) 1000) (format "%7.1fk" (/ (buffer-size) 1000.0)))
-     (t (format "%8d" (buffer-size))))))
-
-;; Explicitly require ibuffer-vc to get its column definitions, which
-;; can't be autoloaded
-(eval-after-load 'ibuffer
-  (use-package ibuffer-vc))
-
-;; Modify the default ibuffer-formats (toggle with `)
-(setq ibuffer-formats
-      '((mark modified read-only vc-status-mini " "
-        (name 18 18 :left :elide)
-        " "
-        (size-h 9 -1 :right)
-        " "
-        (mode 16 16 :left :elide)
-        " "
-        filename-and-process)
-  (mark modified read-only vc-status-mini " "
-        (name 18 18 :left :elide)
-        " "
-        (size-h 9 -1 :right)
-        " "
-        (mode 16 16 :left :elide)
-        " "
-        (vc-status 16 16 :left)
-        " "
-        filename-and-process)))
-
-(setq ibuffer-filter-group-name-face 'font-lock-doc-face)
-
-(global-set-key (kbd "C-x C-b") 'ibuffer)
 
 ;;----------------------------------------------------------------------------
 ;; treat all themes as safe
@@ -335,18 +276,18 @@
   "Renames current buffer and file it is visiting."
   (interactive)
   (let ((name (buffer-name))
-  (filename (buffer-file-name)))
+        (filename (buffer-file-name)))
     (if (not (and filename (file-exists-p filename)))
-  (error "Buffer '%s' is not visiting a file!" name)
+        (error "Buffer '%s' is not visiting a file!" name)
       (let ((new-name (read-file-name "New name: " filename)))
-  (cond ((get-buffer new-name)
-   (error "A buffer named '%s' already exists!" new-name))
-  (t
-   (rename-file filename new-name 1)
-   (rename-buffer new-name)
-   (set-visited-file-name new-name)
-   (set-buffer-modified-p nil)
-   (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
+        (cond ((get-buffer new-name)
+               (error "A buffer named '%s' already exists!" new-name))
+              (t
+               (rename-file filename new-name 1)
+               (rename-buffer new-name)
+               (set-visited-file-name new-name)
+               (set-buffer-modified-p nil)
+               (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
 (global-set-key (kbd "C-c n r") 'rename-this-buffer-and-file)
 
@@ -396,11 +337,6 @@
 (size-indication-mode)
 
 ;;----------------------------------------------------------------------------
-;; delete selection when pasting text
-;;----------------------------------------------------------------------------
-(delete-selection-mode 1)
-
-;;----------------------------------------------------------------------------
 ;; Show unfinished keystrokes early
 ;;----------------------------------------------------------------------------
 (setq echo-keystrokes 0.01)
@@ -440,8 +376,8 @@
 
 (defun unkillable-scratch-buffer ()
   "Don't kill scratch buffer."
-    (if (or (equal (buffer-name (current-buffer)) "*scratch*") (equal (buffer-name (current-buffer)) "*Messages*"))
-        (progn nil) t))
+  (if (or (equal (buffer-name (current-buffer)) "*scratch*") (equal (buffer-name (current-buffer)) "*Messages*"))
+      (progn nil) t))
 
 (add-hook 'kill-buffer-query-functions 'unkillable-scratch-buffer)
 
@@ -455,9 +391,10 @@
 ;;----------------------------------------------------------------------------
 ;; maximize emacs window on load
 ;;----------------------------------------------------------------------------
+;; (add-hook 'window-setup-hook 'toggle-frame-maximized t)
+
 (setq frame-resize-pixelwise t)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
-;; (add-hook 'window-setup-hook 'toggle-frame-maximized t)
 
 ;;----------------------------------------------------------------------------
 ;; kill all other open buffers except the current one
@@ -473,7 +410,7 @@ Don't mess with special buffers."
   (progn
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-  (kill-buffer buffer)))
+        (kill-buffer buffer)))
     (message "Closed all other buffers")))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
@@ -488,19 +425,19 @@ Result is full path.
 If `universal-argument' is called first, copy only the dir path"
   (interactive "P")
   (let ((-fpath
-   (if (equal major-mode 'dired-mode)
-       (expand-file-name default-directory)
-     (if (buffer-file-name)
-   (buffer-file-name)
-       (user-error "Current buffer is not associated with a file")))))
+         (if (equal major-mode 'dired-mode)
+             (expand-file-name default-directory)
+           (if (buffer-file-name)
+               (buffer-file-name)
+             (user-error "Current buffer is not associated with a file")))))
     (kill-new
      (if *dir-path-only-p
-   (progn
-     (message "Directory path copied: %s" (file-name-directory -fpath))
-     (file-name-directory -fpath))
+         (progn
+           (message "Directory path copied: %s" (file-name-directory -fpath))
+           (file-name-directory -fpath))
        (progn
-   (message "File path copied: %s" -fpath)
-   -fpath )))))
+         (message "File path copied: %s" -fpath)
+         -fpath )))))
 
 (global-set-key (kbd "C-c c f") 'surya-copy-file-path)
 
@@ -509,15 +446,15 @@ If `universal-argument' is called first, copy only the dir path"
 Result is full path."
   (interactive)
   (let ((-fpath
-   (if (equal major-mode 'dired-mode)
-       (expand-file-name default-directory)
-     (if (buffer-file-name)
-   (buffer-file-name)
-       (user-error "Current buffer is not associated with a file")))))
-   (progn
-     (kill-new
-     (file-name-directory -fpath))
-     (message "Directory path copied: %s" (file-name-directory -fpath)))))
+         (if (equal major-mode 'dired-mode)
+             (expand-file-name default-directory)
+           (if (buffer-file-name)
+               (buffer-file-name)
+             (user-error "Current buffer is not associated with a file")))))
+    (progn
+      (kill-new
+       (file-name-directory -fpath))
+      (message "Directory path copied: %s" (file-name-directory -fpath)))))
 
 (global-set-key (kbd "C-c c d") 'surya-copy-directory-path)
 
@@ -550,6 +487,12 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (defvar dabbrev-case-fold-search nil)
 
+
+;;----------------------------------------------------------------------------
+;; Replace dabbrev-expand with hippie-expand
+;;----------------------------------------------------------------------------
+(bind-key [remap dabbrev-expand] #'hippie-expand)
+
 ;;----------------------------------------------------------------------------
 ;; zap *up* to char is a handy pair for zap-to-char
 ;; zop-to-char for visual representation of content before zapping
@@ -567,9 +510,9 @@ If not in a Git repo, uses the current directory."
   (interactive "p")
   (let ((ppss (syntax-ppss)))
     (cond ((elt ppss 3)
-     (goto-char (elt ppss 8))
-     (backward-up-sexp (1- arg)))
-    ((backward-up-list arg)))))
+           (goto-char (elt ppss 8))
+           (backward-up-sexp (1- arg)))
+          ((backward-up-list arg)))))
 
 (global-set-key [remap backward-up-list] 'backward-up-sexp) ; C-M-u, C-M-up
 
@@ -579,69 +522,30 @@ If not in a Git repo, uses the current directory."
 (global-set-key (kbd "M-`") 'ns-next-frame)
 
 ;;----------------------------------------------------------------------------
-;; new line and indent
-;;----------------------------------------------------------------------------
-(defun newline-at-end-of-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (move-end-of-line 1)
-  (newline-and-indent))
-
-(global-set-key (kbd "S-<return>") 'newline-at-end-of-line)
-
-(defun newline-before-the-current-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (unless (bolp)
-    (beginning-of-line))
-  (newline)
-  (forward-line -1)
-  (indent-according-to-mode))
-
-(global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
-
-;;----------------------------------------------------------------------------
 ;; don't open a new frame when emacs is already open
 ;;----------------------------------------------------------------------------
 (setq ns-pop-up-frames nil)
 
 ;;----------------------------------------------------------------------------
-;; rearrange window height
+;; launch terminal at the git root or at the current file location
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "s-<up>") 'enlarge-window)
-(global-set-key (kbd "s-<down>") 'shrink-window)
-(global-set-key (kbd "s-<right>") 'enlarge-window-horizontally)
-(global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
-
-;;----------------------------------------------------------------------------
-;; launch macos terminal from emacs
-;;----------------------------------------------------------------------------
-(defun surya/open-Terminal-here ()
-  "Launch terminal from the current file location."
-    (interactive)
-    (shell-command
-     (concat "open -a Terminal "
-             (shell-quote-argument (expand-file-name
-                                    default-directory))) nil nil))
+(defun surya/open-Terminal-here (&optional *git-root-path)
+  "Launch terminal from the current file location.  Use GIT-ROOT-PATH."
+  (interactive "P")
+  (if *git-root-path
+      (if (git-root-dir)
+          (progn
+            (shell-command
+             (format "open -a Terminal %s"
+                     (git-root-dir))))
+        (progn
+          (message (concat "'" (file-name-nondirectory buffer-file-name) "' is not in git repository"))))
+    (progn
+      (shell-command
+       (format "open -a Terminal %s"
+               (expand-file-name default-directory))))))
 
 (bind-key "C-c o t" 'surya/open-Terminal-here)
-
-;;----------------------------------------------------------------------------
-;; winner mode for saving windows layouts and toggle between them
-;;----------------------------------------------------------------------------
-;; Undo and redo the window configuration
-(use-package winner
-  :bind (:map winner-mode-map
-              ("C-c w u" . winner-undo)
-              ("C-c w r" . winner-redo))
-  :commands winner-mode
-  :init
-  (winner-mode)
-  :config
-  ;; Disable conflicting key bindings
-  (unbind-key "C-c <left>" winner-mode-map)
-  (unbind-key "C-c <right>" winner-mode-map))
-
 
 ;;----------------------------------------------------------------------------
 ;; change all prompts to y or n
@@ -659,7 +563,7 @@ If not in a Git repo, uses the current directory."
 (defun reveal-in-finder ()
   "Open current file in finder."
   (interactive)
-  (shell-command (concat "open -R " buffer-file-name)))
+  (shell-command (format "open -R %s" (buffer-file-name))))
 
 (global-set-key (kbd "C-c o f") 'reveal-in-finder)
 
@@ -673,43 +577,16 @@ If not in a Git repo, uses the current directory."
   (setq smex-save-file (locate-user-emacs-file "cache/smex-items")))
 
 ;;----------------------------------------------------------------------------
-;; cut/copy the current line if no region is active
-;;----------------------------------------------------------------------------
-(use-package whole-line-or-region
-  :diminish whole-line-or-region-mode
-  :config
-  (whole-line-or-region-mode t))
-(make-variable-buffer-local 'whole-line-or-region-mode)
-
-(defun suspend-mode-during-cua-rect-selection (mode-name)
-  "Add an advice to suspend `MODE-NAME' while selecting a CUA rectangle."
-  (let ((flagvar (intern (format "%s-was-active-before-cua-rectangle" mode-name)))
-  (advice-name (intern (format "suspend-%s" mode-name))))
-    (eval-after-load 'cua-rect
-      `(progn
-   (defvar ,flagvar nil)
-   (make-variable-buffer-local ',flagvar)
-   (defadvice cua--activate-rectangle (after ,advice-name activate)
-     (setq ,flagvar (and (boundp ',mode-name) ,mode-name))
-     (when ,flagvar
-       (,mode-name 0)))
-   (defadvice cua--deactivate-rectangle (after ,advice-name activate)
-     (when ,flagvar
-       (,mode-name 1)))))))
-
-(suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
-
-;;----------------------------------------------------------------------------
 ;; save recent files list
 ;;----------------------------------------------------------------------------
 (use-package recentf
   :config
   (setq recentf-save-file (locate-user-emacs-file "cache/recent-files"))
   (setq recentf-exclude '("/\\.git/.*\\'"
-  "/elpa/.*\\'"
-  "/elfeed/.*\\'"
-  "/cache/.*\\'"
-  ".*\\.gz\\'"))
+                          "/elpa/.*\\'"
+                          "/elfeed/.*\\'"
+                          "/cache/.*\\'"
+                          ".*\\.gz\\'"))
   (setq recentf-max-saved-items 100)
   (setq recentf-max-menu-items 20)
   (setq recentf-auto-cleanup 600)
@@ -718,8 +595,13 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 ;; remember cursor/point position in buffers using saveplace
 ;;----------------------------------------------------------------------------
-(save-place-mode 1)
-(setq save-place-file (locate-user-emacs-file "cache/saved-places"))
+;; (save-place-mode 1)
+;; (setq save-place-file (locate-user-emacs-file "cache/saved-places"))
+;; Remember point position in files
+(use-package saveplace
+  :config
+  (setq save-place-file (locate-user-emacs-file "cache/saved-places"))
+  (save-place-mode))
 
 ;;----------------------------------------------------------------------------
 ;; prompts all available key bindings in a given buffer
@@ -750,7 +632,7 @@ If not in a Git repo, uses the current directory."
 (use-package diminish
   :config
   (eval-after-load "hideshow" '(diminish 'hs-minor-mode))
-  (eval-after-load "orgtbl-mode-hook" '(diminish 'orgtbl-mode))
+  (eval-after-load "eldoc" '(diminish 'eldoc-mode))
   (eval-after-load "autorevert" '(diminish 'auto-revert-mode))
   (eval-after-load "abbrev-mode-hook" '(diminish 'abbrev-mode)))
 
@@ -776,12 +658,12 @@ If not in a Git repo, uses the current directory."
       (compile "cargo run")
     (shell-command
      (format "rustc %s && %s"
-         (buffer-file-name)
-         (file-name-sans-extension (buffer-file-name))))))
+             (buffer-file-name)
+             (file-name-sans-extension (buffer-file-name))))))
 
 (add-hook 'rust-mode-hook
-      (lambda ()
-        (define-key rust-mode-map (kbd "C-c e") 'rust-save-compile-and-run)))
+          (lambda ()
+            (define-key rust-mode-map (kbd "C-c e") 'rust-save-compile-and-run)))
 
 ;;----------------------------------------------------------------------------
 ;; expand region
@@ -795,18 +677,18 @@ If not in a Git repo, uses the current directory."
 (use-package highlight-symbol
   :diminish highlight-symbol-mode
   :bind (
-    ("M-n" . highlight-symbol-next)
-    ("M-p" . highlight-symbol-prev))
+         ("M-n" . highlight-symbol-next)
+         ("M-p" . highlight-symbol-prev))
   :init
   (dolist (hook '(prog-mode-hook html-mode-hook css-mode-hook))
     (add-hook hook 'highlight-symbol-mode)
     (add-hook hook 'highlight-symbol-nav-mode))
-    (add-hook 'org-mode-hook 'highlight-symbol-nav-mode)
+  (add-hook 'org-mode-hook 'highlight-symbol-nav-mode)
   :config
   (defadvice highlight-symbol-temp-highlight (around maybe-suppress activate)
     "Suppress symbol highlighting while isearching."
     (unless (or isearch-mode
-    (and (boundp 'multiple-cursors-mode) multiple-cursors-mode))
+                (and (boundp 'multiple-cursors-mode) multiple-cursors-mode))
       ad-do-it)))
 
 ;;----------------------------------------------------------------------------
@@ -816,30 +698,30 @@ If not in a Git repo, uses the current directory."
 
 (use-package multiple-cursors
   :bind (("C-<" . mc/mark-previous-like-this)
-    ("C->" . mc/mark-next-like-this)
-    ("C-c C-<" . mc/mark-all-like-this)
-    ("C-c m r" . set-rectangular-region-anchor)
-    ("C-c m c" . mc/edit-lines)
-    ("C-c m e" . mc/edit-ends-of-lines)
-    ("C-c m a" . mc/edit-beginnings-of-lines)))
+         ("C->" . mc/mark-next-like-this)
+         ("C-c C-<" . mc/mark-all-like-this)
+         ("C-c m r" . set-rectangular-region-anchor)
+         ("C-c m c" . mc/edit-lines)
+         ("C-c m e" . mc/edit-ends-of-lines)
+         ("C-c m a" . mc/edit-beginnings-of-lines)))
 
 ;;----------------------------------------------------------------------------
 ;; add js, html, json and css mode maps after compiling
 ;;----------------------------------------------------------------------------
 (eval-when-compile
   (progn
-         (defvar js-mode-map)
-         (defvar json-mode-map)
-         (defvar html-mode-map)
-         (defvar css-mode-map)))
+    (defvar js-mode-map)
+    (defvar json-mode-map)
+    (defvar html-mode-map)
+    (defvar css-mode-map)))
 
 ;;----------------------------------------------------------------------------
 ;; javascript file build with node and show output
 ;;----------------------------------------------------------------------------
 (eval-after-load 'js
   (lambda()
-     (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
-     (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
+    (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
+    (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
 
 ;;----------------------------------------------------------------------------
 ;; enable web beautify mode for js, css, html
@@ -869,8 +751,8 @@ If not in a Git repo, uses the current directory."
 ;; use js-mode for react jsx and disable flycheck
 ;;----------------------------------------------------------------------------
 (add-to-list 'auto-mode-alist '("\\.jsx\\'" . (lambda ()
-                               (js-mode)
-                               (flycheck-mode -1))))
+                                                (js-mode)
+                                                (flycheck-mode -1))))
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
@@ -887,14 +769,14 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (use-package color-theme-sanityinc-tomorrow
   :config
-    (load-theme 'sanityinc-tomorrow-eighties t))
+  (load-theme 'sanityinc-tomorrow-eighties t))
 
 ;;----------------------------------------------------------------------------
 ;; sse json-mode
 ;;----------------------------------------------------------------------------
 (use-package json-mode
   :init
-    (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
+  (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; setup clang-format and execute C programs configuration
@@ -935,6 +817,12 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (electric-pair-mode t)
 
+;; make electric-pair-mode work on more brackets
+(setq electric-pair-pairs '(
+                            (?\" . ?\")
+                            (?\< . ?\>)
+                            ))
+
 ;; ----------------------------------------------------------------------------
 ;; Use less-css-mode
 ;; Activate company mode css hints for less mode
@@ -962,8 +850,8 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (use-package avy
   :bind
-  ("C-;" . avy-goto-char)
-  ("C-:" . avy-goto-subword-1))
+  ("C-;" . avy-goto-char))
+  ;; ("C-:" . avy-goto-subword-1))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -979,11 +867,11 @@ If not in a Git repo, uses the current directory."
 (defun use-eslint-from-node-modules ()
   "Load eslint from local node_modules if available."
   (let* ((root (locate-dominating-file
-    (or (buffer-file-name) default-directory)
-    "node_modules"))
-   (eslint (and root
-    (expand-file-name "node_modules/eslint/bin/eslint.js"
-    root))))
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (eslint (and root
+                      (expand-file-name "node_modules/eslint/bin/eslint.js"
+                                        root))))
     (when (and eslint (file-executable-p eslint))
       (setq-local flycheck-javascript-eslint-executable eslint))))
 
@@ -1017,7 +905,7 @@ If not in a Git repo, uses the current directory."
 (use-package tide
   :diminish tide-mode
   :config
- (define-key tide-mode-map (kbd "C-c b") 'tide-format))
+  (define-key tide-mode-map (kbd "C-c b") 'tide-format))
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
@@ -1069,8 +957,12 @@ If not in a Git repo, uses the current directory."
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
+;; feature-mode needs a hook to diminish orgtbl-mode
 ;;----------------------------------------------------------------------------
 (use-package feature-mode)
+(add-hook 'feature-mode-hook
+          (lambda ()
+            (diminish 'orgtbl-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; set ivy mode, counsel for auto completions across emacs
@@ -1141,13 +1033,37 @@ If not in a Git repo, uses the current directory."
     (add-hook hook 'rainbow-mode)))
 
 ;;----------------------------------------------------------------------------
-;; make "C-x o" prompt for a target window when there are more than 2
+;; Fast window switching
+;; shift <-- --> up down arrow keys to move point between buffers
 ;;----------------------------------------------------------------------------
-(use-package switch-window
+(use-package windmove
   :config
-    (setq-default switch-window-shortcut-style 'alphabet)
-    (setq-default switch-window-timeout nil)
-  :bind("C-x o" . switch-window))
+  (setq windmove-wrap-around t)
+  (windmove-default-keybindings))
+
+;;----------------------------------------------------------------------------
+;; winner mode for saving windows layouts and toggle between them
+;;----------------------------------------------------------------------------
+;; Undo and redo the window configuration
+(use-package winner
+  :bind (:map winner-mode-map
+              ("C-c w u" . winner-undo)
+              ("C-c w r" . winner-redo))
+  :commands winner-mode
+  :init
+  (winner-mode)
+  :config
+  ;; Disable conflicting key bindings
+  (unbind-key "C-c <left>" winner-mode-map)
+  (unbind-key "C-c <right>" winner-mode-map))
+
+;;----------------------------------------------------------------------------
+;; rearrange window/buffer size
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "s-<up>") 'enlarge-window)
+(global-set-key (kbd "s-<down>") 'shrink-window)
+(global-set-key (kbd "s-<right>") 'enlarge-window-horizontally)
+(global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
 
 ;;----------------------------------------------------------------------------
 ;; shift lines up and down with M-up and M-down. When paredit is enabled,
@@ -1156,14 +1072,70 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (use-package move-dup
   :bind (("M-<up>" . md/move-lines-up)
-   ("M-<down>" . md/move-lines-down)
-   ("C-c d d" . md/duplicate-down)
-   ("C-c d u" . md/duplicate-up)))
+         ("M-<down>" . md/move-lines-down)
+         ("C-c d d" . md/duplicate-down)
+         ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
 ;; add clipboard kills from other programs to emacs kill ring
 ;;----------------------------------------------------------------------------
+(setq select-enable-primary t)
 (setq save-interprogram-paste-before-kill t)
+
+;;----------------------------------------------------------------------------
+;; delete selection when pasting text
+;;----------------------------------------------------------------------------
+(delete-selection-mode 1)
+
+
+;;----------------------------------------------------------------------------
+;; cut/copy the current line if no region is active
+;;----------------------------------------------------------------------------
+(use-package whole-line-or-region
+  :diminish whole-line-or-region-mode
+  :config
+  (whole-line-or-region-mode t))
+(make-variable-buffer-local 'whole-line-or-region-mode)
+
+(defun suspend-mode-during-cua-rect-selection (mode-name)
+  "Add an advice to suspend `MODE-NAME' while selecting a CUA rectangle."
+  (let ((flagvar (intern (format "%s-was-active-before-cua-rectangle" mode-name)))
+        (advice-name (intern (format "suspend-%s" mode-name))))
+    (eval-after-load 'cua-rect
+      `(progn
+         (defvar ,flagvar nil)
+         (make-variable-buffer-local ',flagvar)
+         (defadvice cua--activate-rectangle (after ,advice-name activate)
+           (setq ,flagvar (and (boundp ',mode-name) ,mode-name))
+           (when ,flagvar
+             (,mode-name 0)))
+         (defadvice cua--deactivate-rectangle (after ,advice-name activate)
+           (when ,flagvar
+             (,mode-name 1)))))))
+
+(suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
+
+;;----------------------------------------------------------------------------
+;; new line and indent
+;;----------------------------------------------------------------------------
+(defun newline-at-end-of-line ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (move-end-of-line 1)
+  (newline-and-indent))
+
+(global-set-key (kbd "S-<return>") 'newline-at-end-of-line)
+
+(defun newline-before-the-current-line ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (unless (bolp)
+    (beginning-of-line))
+  (newline)
+  (forward-line -1)
+  (indent-according-to-mode))
+
+(global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
 
 ;;----------------------------------------------------------------------------
 ;; update buffer if changed on disk automatically
@@ -1173,16 +1145,6 @@ If not in a Git repo, uses the current directory."
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
 (global-set-key (kbd "<f5>") 'revert-buffer)
-
-;;----------------------------------------------------------------------------
-;; C-x ;, C-x : to comment/uncomment current line
-;;----------------------------------------------------------------------------
-(defun toggle-comment-on-line ()
-  "Comment or uncomment current line."
-  (interactive)
-  (comment-or-uncomment-region (line-beginning-position) (line-end-position)))
-
-(global-set-key (kbd "C-x :") 'toggle-comment-on-line)
 
 ;;----------------------------------------------------------------------------
 ;; page break lines
@@ -1196,17 +1158,6 @@ If not in a Git repo, uses the current directory."
 ;; use package wgrep to edit multiple search results
 ;;----------------------------------------------------------------------------
 (use-package wgrep)
-
-;;----------------------------------------------------------------------------
-;; move buffers between frames
-;;----------------------------------------------------------------------------
-(use-package buffer-move
-  :bind(
-  ("<M-S-up>"    . buf-move-up)
-  ("<M-S-down>"  . buf-move-down)
-  ("<M-S-left>"  . buf-move-left)
-  ("<M-S-right>" . buf-move-right)
-  ))
 
 ;;----------------------------------------------------------------------------
 ;; kill back to indentation
@@ -1244,35 +1195,6 @@ Call a second time to restore the original window configuration."
 (global-unset-key [M-right])
 
 ;;----------------------------------------------------------------------------
-;; re-indent new open line
-;;----------------------------------------------------------------------------
-(defun open-line-with-reindent (n)
-  "A version of `open-line' which reindents the start and end positions.  If there is a fill prefix and/or a `left-margin', insert them on the new line if the line avy-goto-word-or-subword-1ld have been blank.  With arg N, insert N newlines."
-  (interactive "*p")
-  (let* ((do-fill-prefix (and fill-prefix (bolp)))
-   (do-left-margin (and (bolp) (> (current-left-margin) 0)))
-   (loc (point-marker))
-   ;; Don't expand an abbrev before point.
-   (abbrev-mode nil))
-    (delete-horizontal-space t)
-    (newline n)
-    (indent-according-to-mode)
-    (when (eolp)
-      (delete-horizontal-space t))
-    (goto-char loc)
-    (while (> n 0)
-      (cond ((bolp)
-       (if do-left-margin (indent-to (current-left-margin)))
-       (if do-fill-prefix (insert-and-inherit fill-prefix))))
-      (forward-line 1)
-      (setq n (1- n)))
-    (goto-char loc)
-    (end-of-line)
-    (indent-according-to-mode)))
-
-(global-set-key (kbd "C-o") 'open-line-with-reindent)
-
-;;----------------------------------------------------------------------------
 ;; delete pairs of quotes brackets, parens, etc...
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
@@ -1280,6 +1202,18 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
