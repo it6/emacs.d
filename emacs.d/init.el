@@ -1,6 +1,23 @@
 ;;; package --- Summary
 ;;; Commentary:
 ;;; Code:
+
+;;----------------------------------------------------------------------------
+;; Delay garbage collection during startup
+;;----------------------------------------------------------------------------
+(setq gc-cons-threshold most-positive-fixnum)
+
+;;----------------------------------------------------------------------------
+;; Reset garbage collection threshold value to default after startup
+;;----------------------------------------------------------------------------
+(add-hook 'after-init-hook
+          (lambda () (setq gc-cons-threshold 400000)))
+
+;;----------------------------------------------------------------------------
+;; Disable the site default settings
+;;----------------------------------------------------------------------------
+(setq inhibit-default-init t)
+
 ;;----------------------------------------------------------------------------
 ;; require package
 ;;----------------------------------------------------------------------------
@@ -151,7 +168,7 @@
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "Fira Code")
-(setq default-frame-alist '((font . "Fira Code-13")))
+(setq default-frame-alist '((font . "Fira Code-14")))
 
 ;;----------------------------------------------------------------------------
 ;; ligature support for fira code
@@ -368,6 +385,12 @@
 ;; emacs initial scratch buffer message
 ;;----------------------------------------------------------------------------
 (setq-default initial-scratch-message "")
+
+;;----------------------------------------------------------------------------
+;; auto save buffer or window when lost focus
+;; Save buffers when window lost focus.
+;;----------------------------------------------------------------------------
+(add-hook 'focus-out-hook (lambda () (save-some-buffers t)))
 
 ;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
@@ -973,6 +996,7 @@ If not in a Git repo, uses the current directory."
    :map ivy-minibuffer-map
    ("M-y" . ivy-next-line))
   :config
+  (setq ivy-truncate-lines nil)
   (setq counsel-find-file-at-point t))
 
 (use-package ivy
@@ -1033,7 +1057,17 @@ If not in a Git repo, uses the current directory."
     (add-hook hook 'rainbow-mode)))
 
 ;;----------------------------------------------------------------------------
-;; Fast window switching
+;; Move buffers between frames
+;;----------------------------------------------------------------------------
+(use-package buffer-move
+  :bind(
+  ("<M-S-up>"    . buf-move-up)
+  ("<M-S-down>"  . buf-move-down)
+  ("<M-S-left>"  . buf-move-left)
+  ("<M-S-right>" . buf-move-right)))
+
+;;----------------------------------------------------------------------------
+;; Fast buffer switching
 ;; shift <-- --> up down arrow keys to move point between buffers
 ;;----------------------------------------------------------------------------
 (use-package windmove
