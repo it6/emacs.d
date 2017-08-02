@@ -2,6 +2,7 @@
 ;;; Commentary:
 ;;; Code:
 
+
 ;;----------------------------------------------------------------------------
 ;; Delay garbage collection during startup
 ;;----------------------------------------------------------------------------
@@ -122,7 +123,6 @@
  bookmark-default-file (locate-user-emacs-file "cache/bookmarks-items")
  bookmark-save-flag 1
  buffers-menu-max-size 30
- delete-selection-mode t
  ediff-split-window-function 'split-window-horizontally
  ediff-window-setup-function 'ediff-setup-windows-plain
  scroll-preserve-screen-position 'always
@@ -167,42 +167,8 @@
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Fira Code")
-(setq default-frame-alist '((font . "Fira Code-14")))
-
-;;----------------------------------------------------------------------------
-;; ligature support for fira code
-;;----------------------------------------------------------------------------
-(when (window-system)
-  (set-frame-font "Fira Code"))
-(let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
-               (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
-               (36 . ".\\(?:>\\)")
-               (37 . ".\\(?:\\(?:%%\\)\\|%\\)")
-               (38 . ".\\(?:\\(?:&&\\)\\|&\\)")
-               (42 . ".\\(?:\\(?:\\*\\*/\\)\\|\\(?:\\*[*/]\\)\\|[*/>]\\)")
-               (43 . ".\\(?:\\(?:\\+\\+\\)\\|[+>]\\)")
-               (45 . ".\\(?:\\(?:-[>-]\\|<<\\|>>\\)\\|[<>}~-]\\)")
-               (46 . ".\\(?:\\(?:\\.[.<]\\)\\|[.=-]\\)")
-               (47 . ".\\(?:\\(?:\\*\\*\\|//\\|==\\)\\|[*/=>]\\)")
-               (48 . ".\\(?:x[a-zA-Z]\\)")
-               (58 . ".\\(?:::\\|[:=]\\)")
-               (59 . ".\\(?:;;\\|;\\)")
-               (60 . ".\\(?:\\(?:!--\\)\\|\\(?:~~\\|->\\|\\$>\\|\\*>\\|\\+>\\|--\\|<[<=-]\\|=[<=>]\\||>\\)\\|[*$+~/<=>|-]\\)")
-               (61 . ".\\(?:\\(?:/=\\|:=\\|<<\\|=[=>]\\|>>\\)\\|[<=>~]\\)")
-               (62 . ".\\(?:\\(?:=>\\|>[=>-]\\)\\|[=>-]\\)")
-               (63 . ".\\(?:\\(\\?\\?\\)\\|[:=?]\\)")
-               (91 . ".\\(?:]\\)")
-               (92 . ".\\(?:\\(?:\\\\\\\\\\)\\|\\\\\\)")
-               (94 . ".\\(?:=\\)")
-               (119 . ".\\(?:ww\\)")
-               (123 . ".\\(?:-\\)")
-               (124 . ".\\(?:\\(?:|[=|]\\)\\|[=>|]\\)")
-               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)"))))
-
-  (dolist (char-regexp alist)
-    (set-char-table-range composition-function-table (car char-regexp)
-                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
+(set-fontset-font "fontset-default" 'unicode "Source code pro")
+(setq default-frame-alist '((font . "Source code pro-14")))
 
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
@@ -509,12 +475,6 @@ If not in a Git repo, uses the current directory."
 ;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
 (defvar dabbrev-case-fold-search nil)
-
-
-;;----------------------------------------------------------------------------
-;; Replace dabbrev-expand with hippie-expand
-;;----------------------------------------------------------------------------
-(bind-key [remap dabbrev-expand] #'hippie-expand)
 
 ;;----------------------------------------------------------------------------
 ;; zap *up* to char is a handy pair for zap-to-char
@@ -1113,14 +1073,12 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 ;; add clipboard kills from other programs to emacs kill ring
 ;;----------------------------------------------------------------------------
-(setq select-enable-primary t)
 (setq save-interprogram-paste-before-kill t)
 
 ;;----------------------------------------------------------------------------
 ;; delete selection when pasting text
 ;;----------------------------------------------------------------------------
 (delete-selection-mode 1)
-
 
 ;;----------------------------------------------------------------------------
 ;; cut/copy the current line if no region is active
