@@ -116,6 +116,39 @@
   (menu-bar-mode -1))
 
 ;; ----------------------------------------------------------------------------
+;; scroll by one line, try leaving cursor in place
+;; ----------------------------------------------------------------------------
+(defun scroll-in-place (scroll-up)
+  "Scroll window up (or down) without moving point (if possible).
+SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
+  (interactive)
+  (let ((pos (point))
+                (col (current-column))
+                (up-or-down (if scroll-up 1 -1)))
+        (scroll-up up-or-down)
+        (if (pos-visible-in-window-p pos)
+                (goto-char pos)
+          (if (or (eq last-command 'next-line)
+                          (eq last-command 'previous-line))
+                  (move-to-column temporary-goal-column)
+                (move-to-column col)
+                (setq temporary-goal-column col))
+          (setq this-command 'next-line))))
+
+(defun scroll-up-in-place ()
+  "Scroll window up without moving point (if possible)."
+  (interactive)
+  (scroll-in-place t))
+
+(defun scroll-down-in-place ()
+  "Scroll window up without moving point (if possible)."
+  (interactive)
+  (scroll-in-place nil))
+
+(global-set-key (read-kbd-macro "C-s-n") 'scroll-up-in-place)
+(global-set-key (read-kbd-macro "C-s-p") 'scroll-down-in-place)
+
+;; ----------------------------------------------------------------------------
 ;; some basic preferences
 ;; ----------------------------------------------------------------------------
 (setq-default
@@ -145,8 +178,6 @@
                          (t
                           "« no file »")))))
 
-;; ▓
-
 ;;----------------------------------------------------------------------------
 ;; don't use ls command for dired mode
 ;;----------------------------------------------------------------------------
@@ -167,25 +198,65 @@
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Source code pro")
-(setq default-frame-alist '((font . "Source code pro-14")))
+(set-fontset-font "fontset-default" 'unicode "Fira Code")
+(setq default-frame-alist '((font . "Fira Code-14")))
+
+;;----------------------------------------------------------------------------
+;; fira code ligatures for emacs
+;;----------------------------------------------------------------------------
+(when (window-system)
+  (set-default-font "Fira Code"))
+(let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
+               (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
+               (36 . ".\\(?:>\\)")
+               (37 . ".\\(?:\\(?:%%\\)\\|%\\)")
+               (38 . ".\\(?:\\(?:&&\\)\\|&\\)")
+               (42 . ".\\(?:\\(?:\\*\\*/\\)\\|\\(?:\\*[*/]\\)\\|[*/>]\\)")
+               (43 . ".\\(?:\\(?:\\+\\+\\)\\|[+>]\\)")
+               (45 . ".\\(?:\\(?:-[>-]\\|<<\\|>>\\)\\|[<>}~-]\\)")
+               (46 . ".\\(?:\\(?:\\.[.<]\\)\\|[.=-]\\)")
+               (47 . ".\\(?:\\(?:\\*\\*\\|//\\|==\\)\\|[*/=>]\\)")
+               (48 . ".\\(?:x[a-zA-Z]\\)")
+               (58 . ".\\(?:::\\|[:=]\\)")
+               (59 . ".\\(?:;;\\|;\\)")
+               (60 . ".\\(?:\\(?:!--\\)\\|\\(?:~~\\|->\\|\\$>\\|\\*>\\|\\+>\\|--\\|<[<=-]\\|=[<=>]\\||>\\)\\|[*$+~/<=>|-]\\)")
+               (61 . ".\\(?:\\(?:/=\\|:=\\|<<\\|=[=>]\\|>>\\)\\|[<=>~]\\)")
+               (62 . ".\\(?:\\(?:=>\\|>[=>-]\\)\\|[=>-]\\)")
+               (63 . ".\\(?:\\(\\?\\?\\)\\|[:=?]\\)")
+               (91 . ".\\(?:]\\)")
+               (92 . ".\\(?:\\(?:\\\\\\\\\\)\\|\\\\\\)")
+               (94 . ".\\(?:=\\)")
+               (119 . ".\\(?:ww\\)")
+               (123 . ".\\(?:-\\)")
+               (124 . ".\\(?:\\(?:|[=|]\\)\\|[=>|]\\)")
+               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)")
+               )
+             ))
+  (dolist (char-regexp alist)
+    (set-char-table-range composition-function-table (car char-regexp)
+                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
+
+;;----------------------------------------------------------------------------
+;; treat all themes as safe
+;;----------------------------------------------------------------------------
+(setq custom-safe-themes t)
+
+;;----------------------------------------------------------------------------
+;; set default color theme
+;;----------------------------------------------------------------------------
+(use-package eclipse-theme
+  :config
+  (load-theme 'eclipse t))
+
+;; (use-package color-theme-sanityinc-tomorrow
+;;   :config
+;;   (load-theme 'sanityinc-tomorrow-eighties t))
 
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
 ;;----------------------------------------------------------------------------
 (defvar desktop-base-file-name (locate-user-emacs-file "cache/emacs-desktop"))
 (desktop-save-mode 1)
-
-;;----------------------------------------------------------------------------
-;; simple visible bell which works in all terminal types
-;;----------------------------------------------------------------------------
-(defun flash-mode-line ()
-  "Flash modeline on bad commands."
-  (invert-face 'mode-line)
-  (run-with-timer 0.05 nil 'invert-face 'mode-line))
-
-(setq-default
- ring-bell-function 'flash-mode-line)
 
 ;;----------------------------------------------------------------------------
 ;; set option as super key and command as meta key
@@ -231,6 +302,17 @@
                 "  " mode-line-modes mode-line-misc-info mode-line-end-spaces))
 
 ;;----------------------------------------------------------------------------
+;; simple visible bell which works in all terminal types
+;;----------------------------------------------------------------------------
+(defun flash-mode-line ()
+  "Flash modeline on bad commands."
+  (invert-face 'mode-line)
+  (run-with-timer 0.05 nil 'invert-face 'mode-line))
+
+(setq-default
+ ring-bell-function 'flash-mode-line)
+
+;;----------------------------------------------------------------------------
 ;; Use Ibuffer for Buffer List
 ;;----------------------------------------------------------------------------
 (use-package ibuffer
@@ -246,11 +328,6 @@
 (add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
-
-;;----------------------------------------------------------------------------
-;; treat all themes as safe
-;;----------------------------------------------------------------------------
-(setq custom-safe-themes t)
 
 ;;----------------------------------------------------------------------------
 ;; rename both buffer and file name
@@ -272,7 +349,7 @@
                (set-buffer-modified-p nil)
                (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
-(global-set-key (kbd "C-c n r") 'rename-this-buffer-and-file)
+(global-set-key (kbd "C-c r") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -380,8 +457,6 @@
 ;;----------------------------------------------------------------------------
 ;; maximize emacs window on load
 ;;----------------------------------------------------------------------------
-;; (add-hook 'window-setup-hook 'toggle-frame-maximized t)
-
 (setq frame-resize-pixelwise t)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
@@ -468,7 +543,7 @@ If not in a Git repo, uses the current directory."
       (kill-new default-directory)
       (message "File not in GIT repo, copied default path:%s" default-directory))))
 
-(global-set-key (kbd "C-c c v") 'git-root-path)
+(global-set-key (kbd "C-c c g") 'git-root-path)
 
 ;;----------------------------------------------------------------------------
 ;; make searches case sensitive
@@ -576,11 +651,8 @@ If not in a Git repo, uses the current directory."
   (recentf-mode))
 
 ;;----------------------------------------------------------------------------
-;; remember cursor/point position in buffers using saveplace
+;; remember cursor/point position in buffers
 ;;----------------------------------------------------------------------------
-;; (save-place-mode 1)
-;; (setq save-place-file (locate-user-emacs-file "cache/saved-places"))
-;; Remember point position in files
 (use-package saveplace
   :config
   (setq save-place-file (locate-user-emacs-file "cache/saved-places"))
@@ -748,14 +820,7 @@ If not in a Git repo, uses the current directory."
   (add-hook 'markdown-mode-hook #'visual-line-mode))
 
 ;;----------------------------------------------------------------------------
-;; set default color theme
-;;----------------------------------------------------------------------------
-(use-package color-theme-sanityinc-tomorrow
-  :config
-  (load-theme 'sanityinc-tomorrow-eighties t))
-
-;;----------------------------------------------------------------------------
-;; sse json-mode
+;; use json-mode
 ;;----------------------------------------------------------------------------
 (use-package json-mode
   :init
@@ -800,7 +865,9 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 (electric-pair-mode t)
 
+;;----------------------------------------------------------------------------
 ;; make electric-pair-mode work on more brackets
+;;----------------------------------------------------------------------------
 (setq electric-pair-pairs '(
                             (?\" . ?\")
                             (?\< . ?\>)
@@ -843,6 +910,22 @@ If not in a Git repo, uses the current directory."
   :config
   (global-flycheck-mode)
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
+
+;;----------------------------------------------------------------------------
+;; use tagedit for working with html, adds quotes after equals and provides
+;; various other helpful html tag editing methods
+;;----------------------------------------------------------------------------
+(use-package tagedit
+  :ensure t
+  :diminish tagedit-mode
+  :commands tagedit-mode
+  :config
+  (tagedit-add-paredit-like-keybindings))
+  ;; (add-hook 'sgml-mode-hook 'tagedit-mode)
+  ;; (add-hook 'html-mode-hook 'tagedit-mode))
+
+;; enable tagedit in html mode
+(add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
 
 ;;----------------------------------------------------------------------------
 ;; load eslint,tslint from local node_modules when possible
@@ -892,8 +975,6 @@ If not in a Git repo, uses the current directory."
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
-;; (setq tide-tsserver-process-environment '("TSS_LOG=-level verbose -file /tmp/tss.log"))
-
 ;;----------------------------------------------------------------------------
 ;; use diff-hl  mode
 ;;----------------------------------------------------------------------------
@@ -935,6 +1016,7 @@ If not in a Git repo, uses the current directory."
          ("C-c v c" . magit-clone)
          ("C-c v b" . magit-blame)
          ("C-c v l" . magit-log-buffer-file)
+         ("C-c v L" . magit-log-current)
          ("C-c v p" . magit-pull)))
 
 
@@ -948,64 +1030,83 @@ If not in a Git repo, uses the current directory."
             (diminish 'orgtbl-mode)))
 
 ;;----------------------------------------------------------------------------
-;; set ivy mode, counsel for auto completions across emacs
+;; Ivy
 ;;----------------------------------------------------------------------------
-(use-package counsel
-  :bind
-  (("M-y" . counsel-yank-pop)
-   :map ivy-minibuffer-map
-   ("M-y" . ivy-next-line))
-  :config
-  (setq ivy-truncate-lines nil)
-  (setq counsel-find-file-at-point t))
-
 (use-package ivy
+  :ensure ivy-hydra
   :diminish ivy-mode
+  :bind (
+         ("C-x b" . ivy-switch-buffer)
+         :map ivy-minibuffer-map
+         ("<return>" . ivy-alt-done))
   :init
+  (add-hook 'after-init-hook #'ivy-mode)
+  :config
+  (setq ivy-initial-inputs-alist nil)
   (setq ivy-use-virtual-buffers t)
   (setq ivy-count-format "(%d/%d) ")
-  (ivy-mode 1)
+  (setq ivy-format-function #'ivy-format-function-arrow)
+  (setq ivy-wrap t)
+  (setq ivy-truncate-lines nil)
+  (setq ivy-action-wrap t))
+
+;;----------------------------------------------------------------------------
+;; Counsel
+;;----------------------------------------------------------------------------
+(use-package counsel
+  :ensure t
+  :diminish counsel-mode
   :bind (
-         ("M-x" . counsel-M-x)
-         ("\C-s" . swiper)
-         ("C-S-s" . swiper-all)
-         ("C-x b" . ivy-switch-buffer)
-         ("C-x C-f" . counsel-find-file)
+         ;; ("C-x C-f" . counsel-find-file)
          ("C-c f" . counsel-git)
-         ("C-c r" . counsel-rg)
+         ("C-c s" . counsel-rg)
+         ("M-y" . counsel-yank-pop)
          :map ivy-minibuffer-map
-         ("<return>" . ivy-alt-done)))
+         ("M-y" . ivy-next-line))
+  :commands counsel-mode
+  :init
+  (add-hook 'after-init-hook #'counsel-mode)
+  :config
+  (setq counsel-find-file-at-point t)
+  (setq counsel-grep-base-command
+        "rg -i -M 120 --no-heading --line-number --color never '%s' %s"))
+
+;;----------------------------------------------------------------------------
+;; Swiper
+;;----------------------------------------------------------------------------
+(use-package swiper
+  :ensure t
+  :bind (("C-s" . counsel-grep-or-swiper)
+         ("C-S-s" . swiper-all))
+  :config
+  (setq swiper-include-line-number-in-search t))
 
 ;;----------------------------------------------------------------------------
 ;; ivy-hydra brings some extra goodness to ivy-buffer with C-o
 ;;----------------------------------------------------------------------------
-(use-package ivy-hydra)
-
-;;----------------------------------------------------------------------------
-;; use rg frontend for ripgrep search
-;;----------------------------------------------------------------------------
-(use-package rg
-  :bind ("C-c R" . rg))
-
-;;----------------------------------------------------------------------------
-;; use ido-mode
-;; use C-f during file selection to switch to regular find-file
-;;----------------------------------------------------------------------------
-(use-package ido
+(use-package hydra
+  :ensure t
   :config
-  (setq ido-everywhere t)
-  (setq ido-case-fold t)
-  (setq ido-use-filename-at-point  nil)
-  (setq ido-use-filename-at-point nil) ; don't use filename at point (annoying)
-  (setq ido-use-url-at-point nil) ; don't use url at point (annoying)
-  (setq ido-auto-merge-work-directories-length -1)
-  (setq ido-use-virtual-buffers t)
-  (setq ido-enable-flex-matching nil) ; don't try to be too smart
-  (setq-default org-completion-use-ido t)
-  (setq-default magit-completing-read-function 'magit-ido-completing-read)
-  (ido-mode 1))
+  ;; Enable syntax coloring for Hydra definitions
+  (hydra-add-font-lock)
 
-(setq ido-save-directory-list-file (locate-user-emacs-file "cache/ido-last"))
+  (defhydra hydra-next-previous-buffer
+    (global-map "C-x"
+                :color red)
+    "cycle buffers"
+    ("n" next-buffer "→ next buffer")
+    ("p" (lambda () (interactive) (previous-buffer)) "← previous buffer")
+    ("q" nil "Quit"))
+
+  (defhydra hydra-fold
+    (global-map "C-c @"
+                :color red)
+    "hide/show"
+    ("h" hs-hide-all "hide all")
+    ("s" hs-show-all "show all")
+    ("l" hs-hide-level "hide same level")
+    ("t" hs-toggle-hiding "toggle show hide")
+    ("q" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
@@ -1130,7 +1231,7 @@ If not in a Git repo, uses the current directory."
 (global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
 
 ;;----------------------------------------------------------------------------
-;; update buffer if changed on disk automatically
+;; reload update buffer if changed on disk automatically
 ;;----------------------------------------------------------------------------
 (global-auto-revert-mode 1)
 (setq auto-revert-verbose nil)
@@ -1194,6 +1295,9 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
 
 
 
