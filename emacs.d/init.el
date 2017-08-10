@@ -244,13 +244,9 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
-(use-package eclipse-theme
+(use-package color-theme-sanityinc-tomorrow
   :config
-  (load-theme 'eclipse t))
-
-;; (use-package color-theme-sanityinc-tomorrow
-;;   :config
-;;   (load-theme 'sanityinc-tomorrow-eighties t))
+  (load-theme 'sanityinc-tomorrow-eighties t))
 
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
@@ -290,16 +286,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; draw block cursor as wide as the glyph under it
 ;;----------------------------------------------------------------------------
 (setq x-stretch-cursor t)
-
-;;----------------------------------------------------------------------------
-;; remove vc-mode from modeline
-;; magit is powerful and I don't need branch name in mode line
-;; https://magit.vc/manual/magit/The-mode_002dline-information-isn_0027t-always-up_002dto_002ddate.html
-;;----------------------------------------------------------------------------
-(setq-default mode-line-format
-              '("%e" mode-line-front-space mode-line-mule-info mode-line-client mode-line-modified mode-line-remote mode-line-frame-identification mode-line-buffer-identification "   " mode-line-position
-                ;; (vc-mode vc-mode)
-                "  " mode-line-modes mode-line-misc-info mode-line-end-spaces))
 
 ;;----------------------------------------------------------------------------
 ;; simple visible bell which works in all terminal types
@@ -349,7 +335,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
                (set-buffer-modified-p nil)
                (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
-(global-set-key (kbd "C-c r") 'rename-this-buffer-and-file)
+(global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -448,13 +434,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (add-hook 'kill-buffer-query-functions 'unkillable-scratch-buffer)
 
 ;;----------------------------------------------------------------------------
-;; Forces the messages to 0, and kills the *Messages* buffer
-;; Keep the messages buffer to see helpful logs
-;;----------------------------------------------------------------------------
-;; (setq-default message-log-max nil)
-;; (kill-buffer "*Messages*")
-
-;;----------------------------------------------------------------------------
 ;; maximize emacs window on load
 ;;----------------------------------------------------------------------------
 (setq frame-resize-pixelwise t)
@@ -550,15 +529,6 @@ If not in a Git repo, uses the current directory."
 ;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
 (defvar dabbrev-case-fold-search nil)
-
-;;----------------------------------------------------------------------------
-;; zap *up* to char is a handy pair for zap-to-char
-;; zop-to-char for visual representation of content before zapping
-;;----------------------------------------------------------------------------
-(use-package zop-to-char
-  :ensure t
-  :bind (([remap zap-to-char] . zop-to-char)
-         ("M-Z" . zop-up-to-char)))
 
 ;;----------------------------------------------------------------------------
 ;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
@@ -921,10 +891,10 @@ If not in a Git repo, uses the current directory."
   :commands tagedit-mode
   :config
   (tagedit-add-paredit-like-keybindings))
-  ;; (add-hook 'sgml-mode-hook 'tagedit-mode)
-  ;; (add-hook 'html-mode-hook 'tagedit-mode))
 
+;;----------------------------------------------------------------------------
 ;; enable tagedit in html mode
+;;----------------------------------------------------------------------------
 (add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
 
 ;;----------------------------------------------------------------------------
@@ -976,7 +946,7 @@ If not in a Git repo, uses the current directory."
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
 ;;----------------------------------------------------------------------------
-;; use diff-hl  mode
+;; use diff-hl mode, shows git diff in the gutter
 ;;----------------------------------------------------------------------------
 (use-package diff-hl
   :ensure t
@@ -1094,8 +1064,8 @@ If not in a Git repo, uses the current directory."
     (global-map "C-x"
                 :color red)
     "cycle buffers"
-    ("n" next-buffer "→ next buffer")
-    ("p" (lambda () (interactive) (previous-buffer)) "← previous buffer")
+    ("<right>" next-buffer "→ next buffer")
+    ("<left>" (lambda () (interactive) (previous-buffer)) "← previous buffer")
     ("q" nil "Quit"))
 
   (defhydra hydra-fold
@@ -1107,6 +1077,12 @@ If not in a Git repo, uses the current directory."
     ("l" hs-hide-level "hide same level")
     ("t" hs-toggle-hiding "toggle show hide")
     ("q" nil "Quit")))
+
+;;----------------------------------------------------------------------------
+;; use rg frontend for ripgrep search
+;;----------------------------------------------------------------------------
+(use-package rg
+  :bind ("C-c r" . rg))
 
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
@@ -1292,15 +1268,11 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
 
+
+
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
-
-
-
-
-
 
 
 
@@ -1320,7 +1292,7 @@ Call a second time to restore the original window configuration."
 ;;; init.el ends here
 
 ;;----------------------------------------------------------------------------
-;; Try not to change custom-set-variables, also try to keep them to minimum
+;; Try not to add too many custom-set-variables
 ;;----------------------------------------------------------------------------
 
 
