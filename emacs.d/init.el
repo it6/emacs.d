@@ -588,12 +588,34 @@ If not in a Git repo, uses the current directory."
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
 ;;----------------------------------------------------------------------------
-(defun reveal-in-finder ()
-  "Open current file in finder."
-  (interactive)
-  (shell-command (format "open -R %s" (buffer-file-name))))
+(defun do-applescript+ (&rest scripts)
+  "Like `do-applescript', but execute concatenated SCRIPTS.
+In case the execution fails, return an error."
+  (condition-case err
+      (do-applescript
+       (apply 'concat scripts))
+    (error err)))
 
-(global-set-key (kbd "C-c o f") 'reveal-in-finder)
+(defun show-in-finder (&optional path behind)
+  "Display current file/directory in a Finder window.  PATH BEHIND can be passed."
+  (interactive)
+  (let ((item (or path
+                  buffer-file-name
+                  (and (eq major-mode 'dired-mode) default-directory))))
+    (cond
+     ((not (stringp item)))
+     ((file-remote-p item)
+      (error "This item is located on a remote system"))
+     (t
+      (setq item (expand-file-name item))
+      (do-applescript+
+       "tell application \"Finder\" to select (\""
+       item
+       "\" as POSIX file)\n"
+       (unless behind
+         "tell application \"Finder\" to activate"))))))
+
+(global-set-key (kbd "C-c o f") 'show-in-finder)
 
 ;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
@@ -632,11 +654,26 @@ If not in a Git repo, uses the current directory."
 ;; prompts all available key bindings in a given buffer
 ;;----------------------------------------------------------------------------
 (use-package which-key
-  :diminish which-key-mode
-  :init (which-key-mode) (which-key-setup-side-window-right))
+  :ensure t
+  :bind ("C-c h" . which-key-show-top-level)
+  :commands which-key-mode
+  :init
+  (setq which-key-idle-delay 2.0)
+  (setq which-key-idle-secondary-delay 1.0)
+  (setq which-key-allow-imprecise-window-fit t)
+  (setq which-key-sort-order #'which-key-prefix-then-key-order)
+  (add-hook 'after-init-hook #'which-key-mode))
 
 ;;----------------------------------------------------------------------------
-;; hide show mode
+;; Dired configuration
+;;----------------------------------------------------------------------------
+(defvar dired-listing-switches "-ahlF")
+(defvar dired-recursive-deletes 'top)
+(defvar dired-recursive-copies 'always)
+(defvar dired-dwim-target t)
+
+;;----------------------------------------------------------------------------
+;; hide show modeu
 ;;----------------------------------------------------------------------------
 (use-package hideshow
   :commands hs-minor-mode
@@ -725,6 +762,8 @@ If not in a Git repo, uses the current directory."
   :bind (("C-<" . mc/mark-previous-like-this)
          ("C->" . mc/mark-next-like-this)
          ("C-c C-<" . mc/mark-all-like-this)
+         ("C-c m n" . mc/skip-to-next-like-this)
+         ("C-c m p" . mc/skip-to-previous-like-this)
          ("C-c m r" . set-rectangular-region-anchor)
          ("C-c m c" . mc/edit-lines)
          ("C-c m e" . mc/edit-ends-of-lines)
@@ -1273,6 +1312,25 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
+
+
+;;----------------------------------------------------------------------------
+;; World time
+;;----------------------------------------------------------------------------
+;; (use-package time
+;;   :bind ("C-c t" . display-time-world)
+;;   :config
+;;   (message "runs first time only")
+;;   (switch-to-buffer "*wclock*")
+;;   (setq display-time-world-time-format
+;;       "  %I:%M %p - %B %d %A")
+;;   (setq display-time-world-list '(("America/New_York" "New York")
+;;                                   ("America/Los_Angeles" "Los Angeles")
+;;                                   ("Europe/London" "London")
+;;                                   ("Asia/Calcutta" "Bangalore"))))
 
 
 
