@@ -15,20 +15,39 @@
           (lambda () (setq gc-cons-threshold 400000)))
 
 ;;----------------------------------------------------------------------------
+;; Set default directory for save files
+;;----------------------------------------------------------------------------
+(make-directory (locate-user-emacs-file "cache") t)
+
+;;----------------------------------------------------------------------------
 ;; Disable the site default settings
 ;;----------------------------------------------------------------------------
 (setq inhibit-default-init t)
 
 ;;----------------------------------------------------------------------------
-;; require package
+;; Prefer newest version of a file
 ;;----------------------------------------------------------------------------
-(require 'package)
-(setq package-enable-at-startup nil)
-(setq package-archives
-      ;; Package archives, the usual suspects
-      '(("GNU ELPA"     . "http://elpa.gnu.org/packages/")
-        ("MELPA Stable" . "https://stable.melpa.org/packages/")
-        ("MELPA"        . "https://melpa.org/packages/")))
+(setq load-prefer-newer t)
+
+;;----------------------------------------------------------------------------
+;; Activate packages and add the MELPA package archive
+;;----------------------------------------------------------------------------
+(package-initialize)
+(add-to-list 'package-archives
+             '("melpa" . "https://melpa.org/packages/"))
+
+;;----------------------------------------------------------------------------
+;; Bootstrap use-package
+;;----------------------------------------------------------------------------
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+;;----------------------------------------------------------------------------
+;; Load use-package
+;;----------------------------------------------------------------------------
+(eval-when-compile
+  (require 'use-package))
 
 ;;----------------------------------------------------------------------------
 ;; debugging message limit to 10000
@@ -42,6 +61,11 @@
 (setq auto-save-default nil)
 (setq auto-save-list-file-prefix nil)
 (setq create-lockfiles nil)
+
+;;----------------------------------------------------------------------------
+;; auto save buffer or window on emacs focus lost
+;;----------------------------------------------------------------------------
+(add-hook 'focus-out-hook (lambda () (save-some-buffers t)))
 
 ;;----------------------------------------------------------------------------
 ;; put underline below the font bottom line
@@ -248,6 +272,20 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
   :config
   (load-theme 'sanityinc-tomorrow-eighties t))
 
+;; (use-package eclipse-theme
+;;   :config
+;;   (load-theme 'eclipse t))
+
+;; (when (image-type-available-p 'xpm)
+;;   (use-package powerline
+;;     :config
+;;     (setq powerline-display-buffer-size nil)
+;;     (setq powerline-display-mule-info nil)
+;;     (setq powerline-display-hud nil)
+;;     (when (display-graphic-p)
+;;       (powerline-default-theme)
+;;       (remove-hook 'focus-out-hook 'powerline-unset-selected-window))))
+
 ;;----------------------------------------------------------------------------
 ;; reopen desktop with same size as last closed session
 ;;----------------------------------------------------------------------------
@@ -416,12 +454,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (setq-default initial-scratch-message "")
 
 ;;----------------------------------------------------------------------------
-;; auto save buffer or window when lost focus
-;; Save buffers when window lost focus.
-;;----------------------------------------------------------------------------
-(add-hook 'focus-out-hook (lambda () (save-some-buffers t)))
-
-;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
 ;;----------------------------------------------------------------------------
 (setq initial-major-mode 'js-mode)
@@ -444,7 +476,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; add C-u to kill special buffers too
 ;;----------------------------------------------------------------------------
 (defun kill-other-buffers (&optional *special-buffers)
-  "Kill all buffers but the current one.
+  "Kill regular and dired buffers but leave the current one.
 *SPECIAL-BUFFERS is optional 'universal-arugment'
 Don't mess with special buffers."
   (interactive "P")
@@ -453,8 +485,13 @@ Don't mess with special buffers."
   (progn
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-        (kill-buffer buffer)))
-    (message "Closed all other buffers")))
+        (kill-buffer buffer))))
+  (interactive)
+  (mapc (lambda (buffer)
+          (when (eq 'dired-mode (buffer-local-value 'major-mode buffer))
+            (kill-buffer buffer)))
+        (buffer-list))
+  (message "Closed all other buffers"))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
 
@@ -484,25 +521,8 @@ If `universal-argument' is called first, copy only the dir path"
 
 (global-set-key (kbd "C-c c f") 'surya-copy-file-path)
 
-(defun surya-copy-directory-path ()
-  "Copy the current buffer's dired path to `kill-ring'.
-Result is full path."
-  (interactive)
-  (let ((-fpath
-         (if (equal major-mode 'dired-mode)
-             (expand-file-name default-directory)
-           (if (buffer-file-name)
-               (buffer-file-name)
-             (user-error "Current buffer is not associated with a file")))))
-    (progn
-      (kill-new
-       (file-name-directory -fpath))
-      (message "Directory path copied: %s" (file-name-directory -fpath)))))
-
-(global-set-key (kbd "C-c c d") 'surya-copy-directory-path)
-
 ;;----------------------------------------------------------------------------
-;; copy git root path to clipboard
+;; copy git root path to clipboard.
 ;;----------------------------------------------------------------------------
 (defun git-root-dir ()
   "Return the current directory's root Git repo directory."
@@ -523,6 +543,54 @@ If not in a Git repo, uses the current directory."
       (message "File not in GIT repo, copied default path:%s" default-directory))))
 
 (global-set-key (kbd "C-c c g") 'git-root-path)
+
+;;----------------------------------------------------------------------------
+;; copy current line, takes a universal numerical arugment for n lines
+;;----------------------------------------------------------------------------
+(defun sk-copy-line (arg)
+  "Copy lines (as many as prefix argument ARG) in the kill ring."
+  (interactive "p")
+  (kill-ring-save (line-beginning-position)
+                  (line-beginning-position (+ 1 arg)))
+  (message "%d line%s copied" arg (if (= 1 arg) "" "s")))
+
+(global-set-key (kbd "C-c c l") 'sk-copy-line)
+
+;;----------------------------------------------------------------------------
+;; copy/paste/clear current line or selected text to register 1
+;;----------------------------------------------------------------------------
+(defun xah-append-to-register-1 ()
+  "Append current line or text selection to register 1.
+When no selection, append current line with newline char.
+See also: `xah-paste-from-register-1', `copy-to-register'.
+
+URL `http://ergoemacs.org/emacs/elisp_copy-paste_register_1.html'
+Version 2015-12-08"
+  (interactive)
+  (let ($p1 $p2)
+    (if (region-active-p)
+        (progn (setq $p1 (region-beginning))
+               (setq $p2 (region-end)))
+      (progn (setq $p1 (line-beginning-position))
+             (setq $p2 (line-end-position))))
+    (append-to-register ?1 $p1 $p2)
+    (with-temp-buffer (insert "\n")
+                      (append-to-register ?1 (point-min) (point-max)))
+    (message "Appended to register 1: 「%s」." (buffer-substring-no-properties $p1 $p2))))
+
+(defun xah-clear-register-1 ()
+  "Clear register 1.
+See also: `xah-paste-from-register-1', `copy-to-register'.
+
+URL `http://ergoemacs.org/emacs/elisp_copy-paste_register_1.html'
+Version 2015-12-08"
+  (interactive)
+  (progn
+    (copy-to-register ?1 (point-min) (point-min))
+    (message "Cleared register 1.")))
+
+(global-set-key (kbd "C-c c r") 'xah-append-to-register-1)
+(global-set-key (kbd "C-c c c") 'xah-clear-register-1)
 
 ;;----------------------------------------------------------------------------
 ;; make searches case sensitive
@@ -655,6 +723,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package which-key
   :ensure t
+  :diminish which-key-mode
   :bind ("C-c h" . which-key-show-top-level)
   :commands which-key-mode
   :init
@@ -745,29 +814,7 @@ In case the execution fails, return an error."
   (dolist (hook '(prog-mode-hook html-mode-hook css-mode-hook))
     (add-hook hook 'highlight-symbol-mode)
     (add-hook hook 'highlight-symbol-nav-mode))
-  (add-hook 'org-mode-hook 'highlight-symbol-nav-mode)
-  :config
-  (defadvice highlight-symbol-temp-highlight (around maybe-suppress activate)
-    "Suppress symbol highlighting while isearching."
-    (unless (or isearch-mode
-                (and (boundp 'multiple-cursors-mode) multiple-cursors-mode))
-      ad-do-it)))
-
-;;----------------------------------------------------------------------------
-;; multiple cursors
-;;----------------------------------------------------------------------------
-(defvar mc/list-file (locate-user-emacs-file "cache/mc-lists"))
-
-(use-package multiple-cursors
-  :bind (("C-<" . mc/mark-previous-like-this)
-         ("C->" . mc/mark-next-like-this)
-         ("C-c C-<" . mc/mark-all-like-this)
-         ("C-c m n" . mc/skip-to-next-like-this)
-         ("C-c m p" . mc/skip-to-previous-like-this)
-         ("C-c m r" . set-rectangular-region-anchor)
-         ("C-c m c" . mc/edit-lines)
-         ("C-c m e" . mc/edit-ends-of-lines)
-         ("C-c m a" . mc/edit-beginnings-of-lines)))
+  (add-hook 'org-mode-hook 'highlight-symbol-nav-mode))
 
 ;;----------------------------------------------------------------------------
 ;; add js, html, json and css mode maps after compiling
@@ -809,14 +856,16 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  :bind ("C-c p" . prettier-js))
+  :bind ("C-c p f" . prettier-js))
+;; (add-hook 'js-mode-hook 'prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
 ;; use js-mode for react jsx and disable flycheck
 ;;----------------------------------------------------------------------------
-(add-to-list 'auto-mode-alist '("\\.jsx\\'" . (lambda ()
-                                                (js-mode)
-                                                (flycheck-mode -1))))
+(add-to-list 'auto-mode-alist
+             '("\\.jsx\\'" . (lambda ()
+                               (js-mode)
+                               (flycheck-mode -1))))
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
@@ -874,14 +923,6 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (electric-pair-mode t)
 
-;;----------------------------------------------------------------------------
-;; make electric-pair-mode work on more brackets
-;;----------------------------------------------------------------------------
-(setq electric-pair-pairs '(
-                            (?\" . ?\")
-                            (?\< . ?\>)
-                            ))
-
 ;; ----------------------------------------------------------------------------
 ;; Use less-css-mode
 ;; Activate company mode css hints for less mode
@@ -910,7 +951,6 @@ In case the execution fails, return an error."
 (use-package avy
   :bind
   ("C-;" . avy-goto-char))
-  ;; ("C-:" . avy-goto-subword-1))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -1003,31 +1043,9 @@ In case the execution fails, return an error."
     (diff-hl-margin-mode)))
 
 ;;----------------------------------------------------------------------------
-;; show matching parens
-;; highlight matching parentheses
+;; delete selection when pasting text
 ;;----------------------------------------------------------------------------
-(use-package paren
-  :config
-  (setq show-paren-delay 0)
-  (setq show-paren-when-point-inside-paren t)
-  (setq show-paren-when-point-in-periphery t)
-  (show-paren-mode))
-
-;;----------------------------------------------------------------------------
-;; magit status
-;;----------------------------------------------------------------------------
-(use-package magit
-  :config
-  (add-hook 'magit-mode-hook 'visual-line-mode)
-  (setq magit-push-current-to-pushremote t)
-  :ensure t
-  :bind (("C-c v v" . magit-status)
-         ("C-c v c" . magit-clone)
-         ("C-c v b" . magit-blame)
-         ("C-c v l" . magit-log-buffer-file)
-         ("C-c v L" . magit-log-current)
-         ("C-c v p" . magit-pull)))
-
+(delete-selection-mode 1)
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
@@ -1051,6 +1069,7 @@ In case the execution fails, return an error."
   :init
   (add-hook 'after-init-hook #'ivy-mode)
   :config
+  (setq ivy-use-selectable-prompt t)
   (setq ivy-initial-inputs-alist nil)
   (setq ivy-use-virtual-buffers t)
   (setq ivy-count-format "(%d/%d) ")
@@ -1066,9 +1085,10 @@ In case the execution fails, return an error."
   :ensure t
   :diminish counsel-mode
   :bind (
-         ;; ("C-x C-f" . counsel-find-file)
          ("C-c f" . counsel-git)
          ("C-c s" . counsel-rg)
+         ("C-s" . counsel-grep-or-swiper)
+         ("C-c l" . counsel-bookmark)
          ("M-y" . counsel-yank-pop)
          :map ivy-minibuffer-map
          ("M-y" . ivy-next-line))
@@ -1085,8 +1105,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package swiper
   :ensure t
-  :bind (("C-s" . counsel-grep-or-swiper)
-         ("C-S-s" . swiper-all))
+  :bind (("C-S-s" . swiper-all))
   :config
   (setq swiper-include-line-number-in-search t))
 
@@ -1116,6 +1135,17 @@ In case the execution fails, return an error."
     ("l" hs-hide-level "hide same level")
     ("t" hs-toggle-hiding "toggle show hide")
     ("q" nil "Quit")))
+
+;;----------------------------------------------------------------------------
+;; Magit
+;;----------------------------------------------------------------------------
+(use-package magit
+  :ensure t
+  :config
+  (magit-define-popup-switch 'magit-push-popup ?u
+                             "Set upstream" "--set-upstream")
+  (add-hook 'magit-mode-hook 'visual-line-mode)
+  :bind (("C-x g" . magit-status)))
 
 ;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
@@ -1192,15 +1222,16 @@ In case the execution fails, return an error."
 (setq save-interprogram-paste-before-kill t)
 
 ;;----------------------------------------------------------------------------
-;; delete selection when pasting text
+;; indent after pasting text into emacs
 ;;----------------------------------------------------------------------------
-(delete-selection-mode 1)
+(defadvice yank (after indent-region activate)
+  (indent-region (region-beginning) (region-end) nil))
 
 ;;----------------------------------------------------------------------------
 ;; cut/copy the current line if no region is active
 ;;----------------------------------------------------------------------------
 (use-package whole-line-or-region
-  :diminish whole-line-or-region-mode
+  :diminish whole-line-or-region-local-mode
   :config
   (whole-line-or-region-mode t))
 (make-variable-buffer-local 'whole-line-or-region-mode)
@@ -1222,6 +1253,37 @@ In case the execution fails, return an error."
              (,mode-name 1)))))))
 
 (suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
+
+;;----------------------------------------------------------------------------
+;; Zop-to-char
+;;----------------------------------------------------------------------------
+(use-package zop-to-char
+  :ensure t
+  :bind (([remap zap-to-char] . zop-to-char)
+         ("M-Z" . zop-up-to-char)))
+
+;;----------------------------------------------------------------------------
+;; Increase, Decrease font size across all buffers
+;; "C-M-=" default-text-scale-increase, "C-M--" default-text-scale-decrease
+;;----------------------------------------------------------------------------
+(use-package default-text-scale
+  :config (default-text-scale-mode))
+
+;;----------------------------------------------------------------------------
+;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
+;;----------------------------------------------------------------------------
+(defun sk/split-window()
+  "Split the window to see the most recent buffer in the other window.
+Call a second time to restore the original window configuration."
+  (interactive)
+  (if (eq last-command 'sk/split-window)
+      (progn
+        (jump-to-register :sk/split-window)
+        (setq this-command 'sk/unsplit-window))
+    (window-configuration-to-register :sk/split-window)
+    (switch-to-buffer-other-window nil)))
+
+(global-set-key (kbd "<f7>") 'sk/split-window)
 
 ;;----------------------------------------------------------------------------
 ;; new line and indent
@@ -1280,22 +1342,6 @@ In case the execution fails, return an error."
 (global-set-key (kbd "C-M-<backspace>") 'kill-back-to-indentation)
 
 ;;----------------------------------------------------------------------------
-;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
-;;----------------------------------------------------------------------------
-(defun sk/split-window()
-  "Split the window to see the most recent buffer in the other window.
-Call a second time to restore the original window configuration."
-  (interactive)
-  (if (eq last-command 'sk/split-window)
-      (progn
-        (jump-to-register :sk/split-window)
-        (setq this-command 'sk/unsplit-window))
-    (window-configuration-to-register :sk/split-window)
-    (switch-to-buffer-other-window nil)))
-
-(global-set-key (kbd "<f7>") 'sk/split-window)
-
-;;----------------------------------------------------------------------------
 ;; removes default key binding for M-left and M-right
 ;; train myself to use M-f and M-b instead
 ;;----------------------------------------------------------------------------
@@ -1303,17 +1349,178 @@ Call a second time to restore the original window configuration."
 (global-unset-key [M-right])
 
 ;;----------------------------------------------------------------------------
-;; delete pairs of quotes brackets, parens, etc...
+;; show matching parens
+;; highlight matching parentheses
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c d p") 'delete-pair)
+(use-package paren
+  :config
+  (setq show-paren-delay 0)
+  (setq show-paren-when-point-inside-paren t)
+  (setq show-paren-when-point-in-periphery t)
+  (show-paren-mode))
 
+;;----------------------------------------------------------------------------
+;; delete matching pairs
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c p d") 'delete-pair)
 
+;;----------------------------------------------------------------------------
+;; replace brackets around matching sexpressions or selections
+;;----------------------------------------------------------------------------
+(defun xah-change-bracket-pairs ( @from-chars @to-chars)
+  "Change bracket pairs from one type to another.
+
+For example, change all parenthesis () to square brackets [].
+
+Works on selected text, or current text block.
+
+When called in lisp program, @from-chars or @to-chars is a string of bracket pair. eg \"(paren)\",  \"[bracket]\", etc.
+The first and last characters are used.
+If the string contains “,2”, then the first 2 chars and last 2 chars are used, for example  \"[[bracket,2]]\".
+If @to-chars is equal to string “delete brackets”, the brackets are deleted.
+
+ If the string has length greater than 2, the rest are ignored.
+URL `http://ergoemacs.org/emacs/elisp_change_brackets.html'
+Version 2017-08-24"
+  (interactive
+   (let (($bracketsList
+          '("(paren)"
+            "{brace}"
+            "[square]"
+            "<greater>"
+            "`emacs'"
+            "`markdown`"
+            "~tilde~"
+            "=equal="
+            "\"double quote\""
+            "[[double square,2]]"
+            "“curly quote”"
+            "'single quote'"
+            "‘single curly quote’"
+            "‹angle quote›"
+            "«double angle quote»"
+            "「corner」"
+            "『white corner』"
+            "【LENTICULAR】"
+            "〖white LENTICULAR〗"
+            "〈angle bracket big〉"
+            "<angle bracket>"
+            "《double angle bracket》"
+            "〔TORTOISE〕"
+            "⦅white paren⦆"
+            "〚white square〛"
+            "⦃white curly bracket⦄"
+            "〈angle bracket〉"
+            "⦑ANGLE BRACKET WITH DOT⦒"
+            "⧼CURVED ANGLE BRACKET⧽"
+            "⟦math square⟧"
+            "⟨math angle⟩"
+            "⟪math DOUBLE ANGLE BRACKET⟫"
+            "⟮math FLATTENED PARENTHESIS⟯"
+            "⟬math WHITE TORTOISE SHELL BRACKET⟭"
+            "❛HEAVY SINGLE QUOTATION MARK ORNAMENT❜"
+            "❝❞"
+            "❨❩"
+            "❪❫"
+            "❴❵"
+            "❬❭"
+            "❮❯"
+            "❰❱"
+            "delete brackets"
+            )))
+     (list
+      (ido-completing-read "Replace this:" $bracketsList )
+      (ido-completing-read "To:" $bracketsList ))))
+  (let ( $p1 $p2 )
+    (if (use-region-p)
+        (progn
+          (setq $p1 (region-beginning))
+          (setq $p2 (region-end)))
+      (save-excursion
+        (if (re-search-backward "\n[ \t]*\n" nil "move")
+            (progn (re-search-forward "\n[ \t]*\n")
+                   (setq $p1 (point)))
+          (setq $p1 (point)))
+        (if (re-search-forward "\n[ \t]*\n" nil "move")
+            (progn (re-search-backward "\n[ \t]*\n")
+                   (setq $p2 (point)))
+          (setq $p2 (point)))))
+    (save-excursion
+      (save-restriction
+        (narrow-to-region $p1 $p2)
+        (let ( (case-fold-search nil)
+               $fromLeft
+               $fromRight
+               $toLeft
+               $toRight)
+          (cond
+           ((string-match ",2" @from-chars  )
+            (progn
+              (setq $fromLeft (substring @from-chars 0 2))
+              (setq $fromRight (substring @from-chars -2))))
+           (t
+            (progn
+              (setq $fromLeft (substring @from-chars 0 1))
+              (setq $fromRight (substring @from-chars -1)))))
+          (cond
+           ((string-match ",2" @to-chars)
+            (progn
+              (setq $toLeft (substring @to-chars 0 2))
+              (setq $toRight (substring @to-chars -2))))
+           ((string-match "delete brackets" @to-chars)
+            (progn
+              (setq $toLeft "")
+              (setq $toRight "")))
+           (t
+            (progn
+              (setq $toLeft (substring @to-chars 0 1))
+              (setq $toRight (substring @to-chars -1)))))
+          (cond
+           ((string-match "markdown" @from-chars)
+            (progn
+              (goto-char (point-min))
+              (while
+                  (re-search-forward "`\\([^`]+?\\)`" nil t)
+                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
+           ((string-match "tilde" @from-chars)
+            (progn
+              (goto-char (point-min))
+              (while
+                  (re-search-forward "~\\([^~]+?\\)~" nil t)
+                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
+           ((string-match "ascii quote" @from-chars)
+            (progn
+              (goto-char (point-min))
+              (while
+                  (re-search-forward "\"\\([^\"]+?\\)\"" nil t)
+                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
+           ((string-match "equal" @from-chars)
+            (progn
+              (goto-char (point-min))
+              (while
+                  (re-search-forward "=\\([^=]+?\\)=" nil t)
+                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
+           (t (progn
+                (progn
+                  (goto-char (point-min))
+                  (while (search-forward $fromLeft nil t)
+                    (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                    (replace-match $toLeft "FIXEDCASE" "LITERAL")))
+                (progn
+                  (goto-char (point-min))
+                  (while (search-forward $fromRight nil t)
+                    (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
+                    (replace-match $toRight "FIXEDCASE" "LITERAL")))))))))))
+
+(global-set-key (kbd "C-c p r") 'xah-change-bracket-pairs)
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
-
 
 
 
@@ -1331,6 +1538,14 @@ Call a second time to restore the original window configuration."
 ;;                                   ("America/Los_Angeles" "Los Angeles")
 ;;                                   ("Europe/London" "London")
 ;;                                   ("Asia/Calcutta" "Bangalore"))))
+
+
+
+
+
+
+
+
 
 
 
