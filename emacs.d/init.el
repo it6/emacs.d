@@ -30,11 +30,6 @@
 (setq load-prefer-newer t)
 
 ;;----------------------------------------------------------------------------
-;; Load hl-tags-mode to highlight en/closing tags in HTML files
-;;----------------------------------------------------------------------------
-(load "~/.emacs.d/hl-tags-mode")
-
-;;----------------------------------------------------------------------------
 ;; Activate packages and add the MELPA package archive
 ;;----------------------------------------------------------------------------
 (package-initialize)
@@ -979,7 +974,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; enable tagedit in html mode
 ;;----------------------------------------------------------------------------
-(add-hook 'html-mode-hook (lambda () (tagedit-mode 1) (hl-tags-mode 1)))
+(add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
 
 ;;----------------------------------------------------------------------------
 ;; load eslint,tslint from local node_modules when possible
