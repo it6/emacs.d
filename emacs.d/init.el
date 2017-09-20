@@ -30,6 +30,11 @@
 (setq load-prefer-newer t)
 
 ;;----------------------------------------------------------------------------
+;; Load hl-tags-mode to highlight en/closing tags in HTML files
+;;----------------------------------------------------------------------------
+(load "~/.emacs.d/hl-tags-mode")
+
+;;----------------------------------------------------------------------------
 ;; Activate packages and add the MELPA package archive
 ;;----------------------------------------------------------------------------
 (package-initialize)
@@ -974,7 +979,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; enable tagedit in html mode
 ;;----------------------------------------------------------------------------
-(add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
+(add-hook 'html-mode-hook (lambda () (tagedit-mode 1) (hl-tags-mode 1)))
 
 ;;----------------------------------------------------------------------------
 ;; load eslint,tslint from local node_modules when possible
@@ -1365,179 +1370,10 @@ Call a second time to restore the original window configuration."
 (global-set-key (kbd "C-c p d") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
-;; replace brackets around matching sexpressions or selections
-;;----------------------------------------------------------------------------
-(defun xah-change-bracket-pairs ( @from-chars @to-chars)
-  "Change bracket pairs from one type to another.
-
-For example, change all parenthesis () to square brackets [].
-
-Works on selected text, or current text block.
-
-When called in lisp program, @from-chars or @to-chars is a string of bracket pair. eg \"(paren)\",  \"[bracket]\", etc.
-The first and last characters are used.
-If the string contains “,2”, then the first 2 chars and last 2 chars are used, for example  \"[[bracket,2]]\".
-If @to-chars is equal to string “delete brackets”, the brackets are deleted.
-
- If the string has length greater than 2, the rest are ignored.
-URL `http://ergoemacs.org/emacs/elisp_change_brackets.html'
-Version 2017-08-24"
-  (interactive
-   (let (($bracketsList
-          '("(paren)"
-            "{brace}"
-            "[square]"
-            "<greater>"
-            "`emacs'"
-            "`markdown`"
-            "~tilde~"
-            "=equal="
-            "\"double quote\""
-            "[[double square,2]]"
-            "“curly quote”"
-            "'single quote'"
-            "‘single curly quote’"
-            "‹angle quote›"
-            "«double angle quote»"
-            "「corner」"
-            "『white corner』"
-            "【LENTICULAR】"
-            "〖white LENTICULAR〗"
-            "〈angle bracket big〉"
-            "<angle bracket>"
-            "《double angle bracket》"
-            "〔TORTOISE〕"
-            "⦅white paren⦆"
-            "〚white square〛"
-            "⦃white curly bracket⦄"
-            "〈angle bracket〉"
-            "⦑ANGLE BRACKET WITH DOT⦒"
-            "⧼CURVED ANGLE BRACKET⧽"
-            "⟦math square⟧"
-            "⟨math angle⟩"
-            "⟪math DOUBLE ANGLE BRACKET⟫"
-            "⟮math FLATTENED PARENTHESIS⟯"
-            "⟬math WHITE TORTOISE SHELL BRACKET⟭"
-            "❛HEAVY SINGLE QUOTATION MARK ORNAMENT❜"
-            "❝❞"
-            "❨❩"
-            "❪❫"
-            "❴❵"
-            "❬❭"
-            "❮❯"
-            "❰❱"
-            "delete brackets"
-            )))
-     (list
-      (ido-completing-read "Replace this:" $bracketsList )
-      (ido-completing-read "To:" $bracketsList ))))
-  (let ( $p1 $p2 )
-    (if (use-region-p)
-        (progn
-          (setq $p1 (region-beginning))
-          (setq $p2 (region-end)))
-      (save-excursion
-        (if (re-search-backward "\n[ \t]*\n" nil "move")
-            (progn (re-search-forward "\n[ \t]*\n")
-                   (setq $p1 (point)))
-          (setq $p1 (point)))
-        (if (re-search-forward "\n[ \t]*\n" nil "move")
-            (progn (re-search-backward "\n[ \t]*\n")
-                   (setq $p2 (point)))
-          (setq $p2 (point)))))
-    (save-excursion
-      (save-restriction
-        (narrow-to-region $p1 $p2)
-        (let ( (case-fold-search nil)
-               $fromLeft
-               $fromRight
-               $toLeft
-               $toRight)
-          (cond
-           ((string-match ",2" @from-chars  )
-            (progn
-              (setq $fromLeft (substring @from-chars 0 2))
-              (setq $fromRight (substring @from-chars -2))))
-           (t
-            (progn
-              (setq $fromLeft (substring @from-chars 0 1))
-              (setq $fromRight (substring @from-chars -1)))))
-          (cond
-           ((string-match ",2" @to-chars)
-            (progn
-              (setq $toLeft (substring @to-chars 0 2))
-              (setq $toRight (substring @to-chars -2))))
-           ((string-match "delete brackets" @to-chars)
-            (progn
-              (setq $toLeft "")
-              (setq $toRight "")))
-           (t
-            (progn
-              (setq $toLeft (substring @to-chars 0 1))
-              (setq $toRight (substring @to-chars -1)))))
-          (cond
-           ((string-match "markdown" @from-chars)
-            (progn
-              (goto-char (point-min))
-              (while
-                  (re-search-forward "`\\([^`]+?\\)`" nil t)
-                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
-           ((string-match "tilde" @from-chars)
-            (progn
-              (goto-char (point-min))
-              (while
-                  (re-search-forward "~\\([^~]+?\\)~" nil t)
-                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
-           ((string-match "ascii quote" @from-chars)
-            (progn
-              (goto-char (point-min))
-              (while
-                  (re-search-forward "\"\\([^\"]+?\\)\"" nil t)
-                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
-           ((string-match "equal" @from-chars)
-            (progn
-              (goto-char (point-min))
-              (while
-                  (re-search-forward "=\\([^=]+?\\)=" nil t)
-                (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                (replace-match (concat $toLeft "\\1" $toRight ) "FIXEDCASE" ))))
-           (t (progn
-                (progn
-                  (goto-char (point-min))
-                  (while (search-forward $fromLeft nil t)
-                    (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                    (replace-match $toLeft "FIXEDCASE" "LITERAL")))
-                (progn
-                  (goto-char (point-min))
-                  (while (search-forward $fromRight nil t)
-                    (overlay-put (make-overlay (match-beginning 0) (match-end 0)) 'face 'highlight)
-                    (replace-match $toRight "FIXEDCASE" "LITERAL")))))))))))
-
-(global-set-key (kbd "C-c p r") 'xah-change-bracket-pairs)
-
-;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
 
 
-
-;;----------------------------------------------------------------------------
-;; World time
-;;----------------------------------------------------------------------------
-;; (use-package time
-;;   :bind ("C-c t" . display-time-world)
-;;   :config
-;;   (message "runs first time only")
-;;   (switch-to-buffer "*wclock*")
-;;   (setq display-time-world-time-format
-;;       "  %I:%M %p - %B %d %A")
-;;   (setq display-time-world-list '(("America/New_York" "New York")
-;;                                   ("America/Los_Angeles" "Los Angeles")
-;;                                   ("Europe/London" "London")
-;;                                   ("Asia/Calcutta" "Bangalore"))))
 
 
 
