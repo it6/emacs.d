@@ -711,6 +711,11 @@ In case the execution fails, return an error."
   (recentf-mode))
 
 ;;----------------------------------------------------------------------------
+;; wrap long lines by word boundary, and arrow up/down move by visual line, etc
+;;----------------------------------------------------------------------------
+;; (global-visual-line-mode 1)
+
+;;----------------------------------------------------------------------------
 ;; remember cursor/point position in buffers
 ;;----------------------------------------------------------------------------
 (use-package saveplace
@@ -851,11 +856,12 @@ In case the execution fails, return an error."
 (eval-after-load 'less-css-mode
   '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
 
-;;----------------------------------------------------------------------------
+;; ;;----------------------------------------------------------------------------
 ;; use Prettier for JS mode formatting
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
+  :diminish prettier-js-mode
   :bind ("C-c p f" . prettier-js))
 ;; (add-hook 'js-mode-hook 'prettier-js-mode)
 
@@ -917,6 +923,19 @@ In case the execution fails, return an error."
 ;; enable global electric-indent-mode
 ;;----------------------------------------------------------------------------
 (electric-indent-mode t)
+
+;;----------------------------------------------------------------------------
+;; use indent guide for programming modes
+;;----------------------------------------------------------------------------
+(use-package indent-guide
+  :diminish indent-guide-mode
+  :config
+  ;; (set-face-background 'indent-guide-face "gray")
+  (add-hook 'prog-mode-hook 'indent-guide-mode)
+  (add-hook 'ess-mode-hook 'indent-guide-mode)
+  (setq indent-guide-char "¦")
+  ;; ⁞, ⋮, ┆, ┊, ┋, ┇, ︙, ⁞, ¦, |, |
+  (add-hook 'markdown-mode-hook 'indent-guide-mode))
 
 ;;----------------------------------------------------------------------------
 ;; auto generate closing brackets globally using Electric pair mode
@@ -1309,6 +1328,7 @@ Call a second time to restore the original window configuration."
 
 ;;----------------------------------------------------------------------------
 ;; reload update buffer if changed on disk automatically
+;; reload file is updated outside emacs
 ;;----------------------------------------------------------------------------
 (global-auto-revert-mode 1)
 (setq auto-revert-verbose nil)
