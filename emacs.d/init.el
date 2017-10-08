@@ -147,17 +147,17 @@
 SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
   (interactive)
   (let ((pos (point))
-                (col (current-column))
-                (up-or-down (if scroll-up 1 -1)))
-        (scroll-up up-or-down)
-        (if (pos-visible-in-window-p pos)
-                (goto-char pos)
-          (if (or (eq last-command 'next-line)
-                          (eq last-command 'previous-line))
-                  (move-to-column temporary-goal-column)
-                (move-to-column col)
-                (setq temporary-goal-column col))
-          (setq this-command 'next-line))))
+        (col (current-column))
+        (up-or-down (if scroll-up 1 -1)))
+    (scroll-up up-or-down)
+    (if (pos-visible-in-window-p pos)
+        (goto-char pos)
+      (if (or (eq last-command 'next-line)
+              (eq last-command 'previous-line))
+          (move-to-column temporary-goal-column)
+        (move-to-column col)
+        (setq temporary-goal-column col))
+      (setq this-command 'next-line))))
 
 (defun scroll-up-in-place ()
   "Scroll window up without moving point (if possible)."
@@ -190,24 +190,27 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; show file path in frame title
 ;;----------------------------------------------------------------------------
-(setq-default frame-title-format
-              '(:eval
-                (format "%s  %s"
-                        (buffer-name)
-                        (cond
-                         (buffer-file-truename
-                          (concat "« " (abbreviate-file-name default-directory) " »"))
-                         (dired-directory
-                          (concat "« " dired-directory " »"))
-                         (t
-                          "« no file »")))))
+;; (setq-default frame-title-format
+;;               '(:eval
+;;                 (format "%s  %s"
+;;                         (buffer-name)
+;;                         (cond
+;;                          (buffer-file-truename
+;;                           (concat "« " (abbreviate-file-name default-directory) " »"))
+;;                          (dired-directory
+;;                           (concat "« " dired-directory " »"))
+;;                          (t
+;;                           "« no file »")))))
+
+(setq frame-title-format
+      '(:eval (if (buffer-file-name)
+                  (abbreviate-file-name (buffer-file-name)) "%b")))
 
 ;;----------------------------------------------------------------------------
 ;; don't use ls command for dired mode
 ;;----------------------------------------------------------------------------
 (when (string= system-type "darwin")
   (setq dired-use-ls-dired nil))
-
 
 ;;----------------------------------------------------------------------------
 ;; set default directory for cache
@@ -1186,10 +1189,10 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package buffer-move
   :bind(
-  ("<M-S-up>"    . buf-move-up)
-  ("<M-S-down>"  . buf-move-down)
-  ("<M-S-left>"  . buf-move-left)
-  ("<M-S-right>" . buf-move-right)))
+        ("<M-S-up>"    . buf-move-up)
+        ("<M-S-down>"  . buf-move-down)
+        ("<M-S-left>"  . buf-move-left)
+        ("<M-S-right>" . buf-move-right)))
 
 ;;----------------------------------------------------------------------------
 ;; Fast buffer switching
