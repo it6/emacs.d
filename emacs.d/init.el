@@ -923,11 +923,6 @@ In case the execution fails, return an error."
   :config (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
-;; enable global electric-indent-mode
-;;----------------------------------------------------------------------------
-(electric-indent-mode t)
-
-;;----------------------------------------------------------------------------
 ;; use indent guide for programming modes
 ;;----------------------------------------------------------------------------
 (use-package indent-guide
@@ -943,7 +938,13 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; auto generate closing brackets globally using Electric pair mode
 ;;----------------------------------------------------------------------------
-(electric-pair-mode t)
+(setq electric-pair-inhibit-predicate #'electric-pair-conservative-inhibit)
+(electric-pair-mode)
+
+;;----------------------------------------------------------------------------
+;; enable global electric-indent-mode
+;;----------------------------------------------------------------------------
+(setq-default electric-indent-inhibit t)
 
 ;; ----------------------------------------------------------------------------
 ;; Use less-css-mode
@@ -1032,9 +1033,14 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; set typescript mode
 ;;----------------------------------------------------------------------------
+;; use default tsserver that comes bundled with tide
+;; run the following in EVAL to find which tsserver.js is being used
+;; (tide-locate-tsserver-executable)
+
 (defun setup-tide-mode ()
   "Setup tide mode."
   (interactive)
+  (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
   (tide-hl-identifier-mode +1))
@@ -1110,7 +1116,7 @@ In case the execution fails, return an error."
          ("C-c f" . counsel-git)
          ("C-c s" . counsel-rg)
          ("C-s" . counsel-grep-or-swiper)
-         ("C-c l" . counsel-bookmark)
+         ("C-c m" . counsel-bookmark)
          ("M-y" . counsel-yank-pop)
          :map ivy-minibuffer-map
          ("M-y" . ivy-next-line))
@@ -1167,7 +1173,8 @@ In case the execution fails, return an error."
   (magit-define-popup-switch 'magit-push-popup ?u
                              "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind (("C-x g" . magit-status)))
+  :bind (("C-c l" . magit-log-buffer-file)
+         ("C-x g" . magit-status)))
 
 ;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
