@@ -210,7 +210,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; don't use ls command for dired mode
 ;;----------------------------------------------------------------------------
 (when (string= system-type "darwin")
-  (setq dired-use-ls-dired nil))
+  (defvar dired-use-ls-dired nil))
 
 ;;----------------------------------------------------------------------------
 ;; set default directory for cache
@@ -232,7 +232,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; fira code ligatures for emacs
 ;;----------------------------------------------------------------------------
 (when (window-system)
-  (set-default-font "Fira Code"))
+  (set-frame-font "Fira Code"))
 (let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
                (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
                (36 . ".\\(?:>\\)")
@@ -343,7 +343,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; Use Ibuffer for Buffer List
 ;;----------------------------------------------------------------------------
 (use-package ibuffer
-  :defer t
   :bind ([remap list-buffers] . ibuffer)
   :config
   (setq ibuffer-default-sorting-mode 'major-mode))
@@ -392,24 +391,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; Repeat mark popping
 ;;----------------------------------------------------------------------------
 (setq set-mark-command-repeat-pop t)
-
-;;----------------------------------------------------------------------------
-;; ansi-term and bash settings
-;;----------------------------------------------------------------------------
-(defvar my-term-shell "/bin/bash")
-
-(defadvice ansi-term (before force-bash)
-  "Open a bash shell by default."
-  (interactive (list my-term-shell)))
-(ad-activate 'ansi-term)
-
-(defun set-no-process-query-on-exit ()
-  "Close ansi term without process running confirmation."
-  (let ((proc (get-buffer-process (current-buffer))))
-    (when (processp proc)
-      (set-process-query-on-exit-flag proc nil))))
-
-(add-hook 'term-exec-hook 'set-no-process-query-on-exit)
 
 ;;----------------------------------------------------------------------------
 ;; use spaces instead of tabs and set default tab width
@@ -647,14 +628,24 @@ Version 2015-12-08"
 (bind-key "C-c o t" 'surya/open-Terminal-here)
 
 ;;----------------------------------------------------------------------------
-;; change all prompts to y or n
+;; ansi-term and bash settings within emacs
 ;;----------------------------------------------------------------------------
-(fset 'yes-or-no-p 'y-or-n-p)
+(defvar my-term-shell "/bin/bash")
 
-;;----------------------------------------------------------------------------
-;; browse url of file from emacs opens in default browser
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c o b") 'browse-url-of-file)
+(defadvice ansi-term (before force-bash)
+  "Open a bash shell by default."
+  (interactive (list my-term-shell)))
+(ad-activate 'ansi-term)
+
+(defun set-no-process-query-on-exit ()
+  "Close ansi term without process running confirmation."
+  (let ((proc (get-buffer-process (current-buffer))))
+    (when (processp proc)
+      (set-process-query-on-exit-flag proc nil))))
+
+(add-hook 'term-exec-hook 'set-no-process-query-on-exit)
+
+(global-set-key (kbd "C-c o s") 'ansi-term)
 
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
@@ -689,11 +680,19 @@ In case the execution fails, return an error."
 (global-set-key (kbd "C-c o f") 'show-in-finder)
 
 ;;----------------------------------------------------------------------------
+;; browse url of file from emacs opens in default browser
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c o b") 'browse-url-of-file)
+
+;;----------------------------------------------------------------------------
+;; change all prompts to y or n
+;;----------------------------------------------------------------------------
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
 ;;----------------------------------------------------------------------------
 (use-package smex
-  :ensure t
-  :defer t
   :config
   (setq smex-save-file (locate-user-emacs-file "cache/smex-items")))
 
@@ -714,11 +713,6 @@ In case the execution fails, return an error."
   (recentf-mode))
 
 ;;----------------------------------------------------------------------------
-;; wrap long lines by word boundary, and arrow up/down move by visual line, etc
-;;----------------------------------------------------------------------------
-;; (global-visual-line-mode 1)
-
-;;----------------------------------------------------------------------------
 ;; remember cursor/point position in buffers
 ;;----------------------------------------------------------------------------
 (use-package saveplace
@@ -730,7 +724,6 @@ In case the execution fails, return an error."
 ;; prompts all available key bindings in a given buffer
 ;;----------------------------------------------------------------------------
 (use-package which-key
-  :ensure t
   :diminish which-key-mode
   :bind ("C-c h" . which-key-show-top-level)
   :commands which-key-mode
@@ -774,35 +767,6 @@ In case the execution fails, return an error."
   (eval-after-load "eldoc" '(diminish 'eldoc-mode))
   (eval-after-load "autorevert" '(diminish 'auto-revert-mode))
   (eval-after-load "abbrev-mode-hook" '(diminish 'abbrev-mode)))
-
-;;----------------------------------------------------------------------------
-;; use rust mode
-;;----------------------------------------------------------------------------
-(use-package rust-mode
-  :mode "\\.rs\\'"
-  :config
-  (setq rust-format-on-save t)
-  (add-hook 'rust-mode-hook
-            (lambda ()
-              (local-set-key (kbd "C-c b") #'rust-format-buffer))))
-
-;;----------------------------------------------------------------------------
-;; compile rust file and display output in mini buffer
-;;----------------------------------------------------------------------------
-(defun rust-save-compile-and-run ()
-  "Run and compile rust code."
-  (interactive)
-  (save-buffer)
-  (if (locate-dominating-file (buffer-file-name) "Cargo.toml")
-      (compile "cargo run")
-    (shell-command
-     (format "rustc %s && %s"
-             (buffer-file-name)
-             (file-name-sans-extension (buffer-file-name))))))
-
-(add-hook 'rust-mode-hook
-          (lambda ()
-            (define-key rust-mode-map (kbd "C-c e") 'rust-save-compile-and-run)))
 
 ;;----------------------------------------------------------------------------
 ;; expand region
@@ -866,22 +830,19 @@ In case the execution fails, return an error."
 (use-package prettier-js
   :diminish prettier-js-mode
   :bind ("C-c p f" . prettier-js))
-;; (add-hook 'js-mode-hook 'prettier-js-mode)
+(add-hook 'js-mode-hook 'prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
 ;; use js-mode for react jsx and disable flycheck
 ;;----------------------------------------------------------------------------
 (add-to-list 'auto-mode-alist
              '("\\.jsx\\'" . (lambda ()
-                               (js-mode)
                                (flycheck-mode -1))))
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
 ;;----------------------------------------------------------------------------
 (use-package markdown-mode
-  :ensure t
-  :defer t
   :config
   (add-hook 'markdown-mode-hook #'tildify-mode)
   (add-hook 'markdown-mode-hook #'visual-line-mode))
@@ -894,27 +855,10 @@ In case the execution fails, return an error."
   (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
 
 ;;----------------------------------------------------------------------------
-;; setup clang-format and execute C programs configuration
-;; (add-hook 'before-save-hook 'clang-format-before-save).
-;;----------------------------------------------------------------------------
-(use-package clang-format)
-(defun clang-format-before-save ()
-  "Add this to .emacs to clang-format on save."
-  (interactive)
-  (when (eq major-mode 'c-mode) (clang-format-buffer)))
-
-;; install hook to use clang-format on save
-(add-hook 'before-save-hook 'clang-format-before-save)
-
-(eval-after-load 'cc-mode
-  '(define-key c-mode-map (kbd "C-c e") '(lambda ()  (interactive) (defvar sk-build-command) (setq sk-build-command (concat "clang " (buffer-name) " && ./a.out")) (shell-command sk-build-command) )))
-
-;;----------------------------------------------------------------------------
 ;; load yasnippets
 ;;----------------------------------------------------------------------------
 (use-package yasnippet
   :diminish yas-minor-mode
-  :ensure t
   :init
   (add-hook 'sgml-mode-hook #'yas-minor-mode)
   (add-hook 'prog-mode-hook #'yas-minor-mode)
@@ -923,22 +867,8 @@ In case the execution fails, return an error."
   :config (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
-;; use indent guide for programming modes
-;;----------------------------------------------------------------------------
-(use-package indent-guide
-  :diminish indent-guide-mode
-  :config
-  ;; (set-face-background 'indent-guide-face "gray")
-  (add-hook 'prog-mode-hook 'indent-guide-mode)
-  (add-hook 'ess-mode-hook 'indent-guide-mode)
-  (setq indent-guide-char "¦")
-  ;; ⁞, ⋮, ┆, ┊, ┋, ┇, ︙, ⁞, ¦, |, |
-  (add-hook 'markdown-mode-hook 'indent-guide-mode))
-
-;;----------------------------------------------------------------------------
 ;; auto generate closing brackets globally using Electric pair mode
 ;;----------------------------------------------------------------------------
-(setq electric-pair-inhibit-predicate #'electric-pair-conservative-inhibit)
 (electric-pair-mode)
 
 ;;----------------------------------------------------------------------------
@@ -957,7 +887,6 @@ In case the execution fails, return an error."
 ;; use undo-tree
 ;;----------------------------------------------------------------------------
 (use-package undo-tree
-  :ensure t
   :diminish (undo-tree-mode)
   :commands global-undo-tree-mode
   :init
@@ -988,7 +917,6 @@ In case the execution fails, return an error."
 ;; various other helpful html tag editing methods
 ;;----------------------------------------------------------------------------
 (use-package tagedit
-  :ensure t
   :diminish tagedit-mode
   :commands tagedit-mode
   :config
@@ -1040,6 +968,9 @@ In case the execution fails, return an error."
 (defun setup-tide-mode ()
   "Setup tide mode."
   (interactive)
+  (defvar tide-tsserver-executable)
+  (defvar tide--tsserver)
+  (defvar tide-tsserver-directory)
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
@@ -1056,7 +987,6 @@ In case the execution fails, return an error."
 ;; use diff-hl mode, shows git diff in the gutter
 ;;----------------------------------------------------------------------------
 (use-package diff-hl
-  :ensure t
   :commands global-diff-hl-mode
   :init
   (add-hook 'after-init-hook #'global-diff-hl-mode)
@@ -1069,11 +999,6 @@ In case the execution fails, return an error."
   ;; Use margin display when in terminal
   (unless (display-graphic-p)
     (diff-hl-margin-mode)))
-
-;;----------------------------------------------------------------------------
-;; delete selection when pasting text
-;;----------------------------------------------------------------------------
-(delete-selection-mode 1)
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
@@ -1110,7 +1035,6 @@ In case the execution fails, return an error."
 ;; Counsel
 ;;----------------------------------------------------------------------------
 (use-package counsel
-  :ensure t
   :diminish counsel-mode
   :bind (
          ("C-c f" . counsel-git)
@@ -1132,7 +1056,6 @@ In case the execution fails, return an error."
 ;; Swiper
 ;;----------------------------------------------------------------------------
 (use-package swiper
-  :ensure t
   :bind (("C-S-s" . swiper-all))
   :config
   (setq swiper-include-line-number-in-search t))
@@ -1141,7 +1064,6 @@ In case the execution fails, return an error."
 ;; ivy-hydra brings some extra goodness to ivy-buffer with C-o
 ;;----------------------------------------------------------------------------
 (use-package hydra
-  :ensure t
   :config
   ;; Enable syntax coloring for Hydra definitions
   (hydra-add-font-lock)
@@ -1168,7 +1090,6 @@ In case the execution fails, return an error."
 ;; Magit
 ;;----------------------------------------------------------------------------
 (use-package magit
-  :ensure t
   :config
   (magit-define-popup-switch 'magit-push-popup ?u
                              "Set upstream" "--set-upstream")
@@ -1246,6 +1167,16 @@ In case the execution fails, return an error."
          ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
+;; delete matching pairs
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c p d") 'delete-pair)
+
+;;----------------------------------------------------------------------------
+;; delete selection when pasting text
+;;----------------------------------------------------------------------------
+(delete-selection-mode 1)
+
+;;----------------------------------------------------------------------------
 ;; add clipboard kills from other programs to emacs kill ring
 ;;----------------------------------------------------------------------------
 (setq save-interprogram-paste-before-kill t)
@@ -1254,6 +1185,7 @@ In case the execution fails, return an error."
 ;; indent after pasting text into emacs
 ;;----------------------------------------------------------------------------
 (defadvice yank (after indent-region activate)
+  "Indent text after pasting."
   (indent-region (region-beginning) (region-end) nil))
 
 ;;----------------------------------------------------------------------------
@@ -1262,7 +1194,7 @@ In case the execution fails, return an error."
 (use-package whole-line-or-region
   :diminish whole-line-or-region-local-mode
   :config
-  (whole-line-or-region-mode t))
+  (whole-line-or-region-global-mode t))
 (make-variable-buffer-local 'whole-line-or-region-mode)
 
 (defun suspend-mode-during-cua-rect-selection (mode-name)
@@ -1287,7 +1219,6 @@ In case the execution fails, return an error."
 ;; Zop-to-char
 ;;----------------------------------------------------------------------------
 (use-package zop-to-char
-  :ensure t
   :bind (([remap zap-to-char] . zop-to-char)
          ("M-Z" . zop-up-to-char)))
 
@@ -1312,7 +1243,7 @@ Call a second time to restore the original window configuration."
     (window-configuration-to-register :sk/split-window)
     (switch-to-buffer-other-window nil)))
 
-(global-set-key (kbd "<f7>") 'sk/split-window)
+(global-set-key (kbd "C-|") 'sk/split-window)
 
 ;;----------------------------------------------------------------------------
 ;; new line and indent
@@ -1388,11 +1319,6 @@ Call a second time to restore the original window configuration."
   (setq show-paren-when-point-inside-paren t)
   (setq show-paren-when-point-in-periphery t)
   (show-paren-mode))
-
-;;----------------------------------------------------------------------------
-;; delete matching pairs
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c p d") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el

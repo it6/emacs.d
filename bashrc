@@ -16,6 +16,9 @@ export HISTCONTROL=ignoreboth:erasedups
 # use xterm-256color
 export TERM=xterm-256color
 
+# export no proxy for adp
+export no_proxy=adp.com,aws.adp
+
 # path to z shell
 . ~/z/z.sh
 
@@ -69,14 +72,19 @@ set bell-style visible
 shopt -s autocd
 
 # most commonly used aliases
-# export EDITOR='subl'
-alias emacs='open -a /Applications/Emacs.app'
 export EDITOR='open -a /Applications/Emacs.app'
-alias zprezto='$EDITOR ~/.zpreztorc'
+# export EDITOR='subl'
+
+alias em='open -a /Applications/Emacs.app'
+alias emdebug='/Applications/Emacs.app/Contents/MacOS/Emacs --debug-init'
+alias emacsd='/Users/kotamrs/.emacs.d'
+alias emacsinstall='brew install emacs --with-cocoa --with-gnutls --with-librsvg --with-modules'
+
 alias npmrc='$EDITOR ~/.npmrc'
 alias zshrc='$EDITOR ~/.zshrc'
 alias bashprofile='$EDITOR ~/.bash_profile'
 alias bashrc='$EDITOR ~/.bashrc'
+# export SHELL_SESSION_HISTORY=0
 alias bashhistory='$EDITOR ~/.bash_history'
 alias zprofile='$EDITOR ~/.zprofile'
 alias gitconfig='$EDITOR ~/.gitconfig'
@@ -84,10 +92,9 @@ alias gitignore='$EDITOR ~/.gitignore'
 
 alias npg='npm list --depth=0 -g'
 alias npu='npm outdated -g --depth=0'
+alias npf='/Users/kotamrs/.nvm/versions/node/v6.9.5/lib/node_modules'
 alias brg='brew list --versions'
 alias brewup='brew update && brew upgrade && brew cleanup; brew doctor'
-alias emacsd='/Users/kotamrs/.emacs.d'
-alias yrg='/Users/kotamrs/.config/yarn/global/node_modules'
 alias nvm0='nvm use 0'
 
 # use tab to complete from the list
