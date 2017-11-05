@@ -766,7 +766,7 @@ In case the execution fails, return an error."
   (eval-after-load "hideshow" '(diminish 'hs-minor-mode))
   (eval-after-load "eldoc" '(diminish 'eldoc-mode))
   (eval-after-load "autorevert" '(diminish 'auto-revert-mode))
-  (eval-after-load "abbrev-mode-hook" '(diminish 'abbrev-mode)))
+  (eval-after-load "abbrev" '(diminish 'abbrev-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; expand region
@@ -823,7 +823,7 @@ In case the execution fails, return an error."
 (eval-after-load 'less-css-mode
   '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
 
-;; ;;----------------------------------------------------------------------------
+;;----------------------------------------------------------------------------
 ;; use Prettier for JS mode formatting
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
@@ -886,16 +886,16 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; use undo-tree
 ;;----------------------------------------------------------------------------
-(use-package undo-tree
-  :diminish (undo-tree-mode)
-  :commands global-undo-tree-mode
-  :init
-  (add-hook 'after-init-hook #'global-undo-tree-mode)
-  :config
-  (setq undo-tree-history-directory-alist `((".*" . ,(locate-user-emacs-file "cache/undo/"))))
-  (setq undo-tree-auto-save-history t)
-  (setq undo-tree-visualizer-timestamps t)
-  (setq undo-tree-visualizer-relative-timestamps t))
+;; (use-package undo-tree
+;;   :diminish (undo-tree-mode)
+;;   :commands global-undo-tree-mode
+;;   :init
+;;   (add-hook 'after-init-hook #'global-undo-tree-mode)
+;;   :config
+;;   (setq undo-tree-history-directory-alist `((".*" . ,(locate-user-emacs-file "cache/undo/"))))
+;;   (setq undo-tree-auto-save-history t)
+;;   (setq undo-tree-visualizer-timestamps t)
+;;   (setq undo-tree-visualizer-relative-timestamps t))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
@@ -1323,6 +1323,9 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
 
 
 
