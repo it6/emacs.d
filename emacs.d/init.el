@@ -225,43 +225,8 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Fira Code")
-(setq default-frame-alist '((font . "Fira Code-14")))
-
-;;----------------------------------------------------------------------------
-;; fira code ligatures for emacs
-;;----------------------------------------------------------------------------
-(when (window-system)
-  (set-frame-font "Fira Code"))
-(let ((alist '((33 . ".\\(?:\\(?:==\\|!!\\)\\|[!=]\\)")
-               (35 . ".\\(?:###\\|##\\|_(\\|[#(?[_{]\\)")
-               (36 . ".\\(?:>\\)")
-               (37 . ".\\(?:\\(?:%%\\)\\|%\\)")
-               (38 . ".\\(?:\\(?:&&\\)\\|&\\)")
-               (42 . ".\\(?:\\(?:\\*\\*/\\)\\|\\(?:\\*[*/]\\)\\|[*/>]\\)")
-               (43 . ".\\(?:\\(?:\\+\\+\\)\\|[+>]\\)")
-               (45 . ".\\(?:\\(?:-[>-]\\|<<\\|>>\\)\\|[<>}~-]\\)")
-               (46 . ".\\(?:\\(?:\\.[.<]\\)\\|[.=-]\\)")
-               (47 . ".\\(?:\\(?:\\*\\*\\|//\\|==\\)\\|[*/=>]\\)")
-               (48 . ".\\(?:x[a-zA-Z]\\)")
-               (58 . ".\\(?:::\\|[:=]\\)")
-               (59 . ".\\(?:;;\\|;\\)")
-               (60 . ".\\(?:\\(?:!--\\)\\|\\(?:~~\\|->\\|\\$>\\|\\*>\\|\\+>\\|--\\|<[<=-]\\|=[<=>]\\||>\\)\\|[*$+~/<=>|-]\\)")
-               (61 . ".\\(?:\\(?:/=\\|:=\\|<<\\|=[=>]\\|>>\\)\\|[<=>~]\\)")
-               (62 . ".\\(?:\\(?:=>\\|>[=>-]\\)\\|[=>-]\\)")
-               (63 . ".\\(?:\\(\\?\\?\\)\\|[:=?]\\)")
-               (91 . ".\\(?:]\\)")
-               (92 . ".\\(?:\\(?:\\\\\\\\\\)\\|\\\\\\)")
-               (94 . ".\\(?:=\\)")
-               (119 . ".\\(?:ww\\)")
-               (123 . ".\\(?:-\\)")
-               (124 . ".\\(?:\\(?:|[=|]\\)\\|[=>|]\\)")
-               (126 . ".\\(?:~>\\|~~\\|[>=@~-]\\)")
-               )
-             ))
-  (dolist (char-regexp alist)
-    (set-char-table-range composition-function-table (car char-regexp)
-                          `([,(cdr char-regexp) 0 font-shape-gstring]))))
+(set-fontset-font "fontset-default" 'unicode "Operator Mono")
+(setq default-frame-alist '((font . "Operator Mono-14")))
 
 ;;----------------------------------------------------------------------------
 ;; treat all themes as safe
@@ -271,6 +236,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
+
 (use-package color-theme-sanityinc-tomorrow
   :config
   (load-theme 'sanityinc-tomorrow-eighties t))
@@ -830,7 +796,7 @@ In case the execution fails, return an error."
 (use-package prettier-js
   :diminish prettier-js-mode
   :bind ("C-c p f" . prettier-js))
-(add-hook 'js-mode-hook 'prettier-js-mode)
+;; (add-hook 'js-mode-hook 'prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
 ;; use js-mode for react jsx and disable flycheck
@@ -877,25 +843,9 @@ In case the execution fails, return an error."
 (setq-default electric-indent-inhibit t)
 
 ;; ----------------------------------------------------------------------------
-;; Use less-css-mode
-;; Activate company mode css hints for less mode
-;; Set less indentation to two spaces
+;; less mode
 ;; ----------------------------------------------------------------------------
 (use-package less-css-mode)
-
-;;----------------------------------------------------------------------------
-;; use undo-tree
-;;----------------------------------------------------------------------------
-;; (use-package undo-tree
-;;   :diminish (undo-tree-mode)
-;;   :commands global-undo-tree-mode
-;;   :init
-;;   (add-hook 'after-init-hook #'global-undo-tree-mode)
-;;   :config
-;;   (setq undo-tree-history-directory-alist `((".*" . ,(locate-user-emacs-file "cache/undo/"))))
-;;   (setq undo-tree-auto-save-history t)
-;;   (setq undo-tree-visualizer-timestamps t)
-;;   (setq undo-tree-visualizer-relative-timestamps t))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
