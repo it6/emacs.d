@@ -22,6 +22,25 @@ export no_proxy=adp.com,aws.adp
 # path to z shell
 . ~/z/z.sh
 
+# tmux session on terminal start
+# connects to an existing tmux session or create a new one
+case $- in
+    *i*)
+    if command -v tmux>/dev/null; then
+        if [[ ! $TERM =~ screen ]] && [[ -z $TMUX ]]; then
+          if tmux ls 2> /dev/null | grep -q -v attached; then
+            exec tmux attach -t $(tmux ls 2> /dev/null | grep -v attached | head -1 | cut -d : -f 1)
+          else
+            exec tmux
+          fi
+        fi
+    fi
+    ;;
+esac
+
+# path to emscripten toolchain
+# . ~/sk/projects/emsdk/emsdk_env.sh --build=Release
+
 # starts emacs server when using emacsclient
 # export ALTERNATE_EDITOR=""
 
@@ -29,15 +48,6 @@ export no_proxy=adp.com,aws.adp
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# add yarn executables to path
-export PATH="$PATH:$HOME/.config/yarn/global/node_modules/.bin"
-
-# add rust executables to path
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# macos defaults removed this but the settings are applied to the mac
-# . ~/.macos
 
 # show dot files in finder
 alias showFiles='defaults write com.apple.finder AppleShowAllFiles YES;
@@ -72,18 +82,20 @@ set bell-style visible
 shopt -s autocd
 
 # most commonly used aliases
-export EDITOR='open -a /Applications/Emacs.app'
-# export EDITOR='subl'
+# export EDITOR='open -a /Applications/Emacs.app'
+export EDITOR='subl'
 
 alias em='open -a /Applications/Emacs.app'
+
 alias emdebug='/Applications/Emacs.app/Contents/MacOS/Emacs --debug-init'
 alias emacsd='/Users/kotamrs/.emacs.d'
 alias emacsinstall='brew install emacs --with-cocoa --with-gnutls --with-librsvg --with-modules'
 
 alias npmrc='$EDITOR ~/.npmrc'
-alias zshrc='$EDITOR ~/.zshrc'
+alias tmuxconf='$EDITOR ~/.tmux.conf'
 alias bashprofile='$EDITOR ~/.bash_profile'
 alias bashrc='$EDITOR ~/.bashrc'
+
 # export SHELL_SESSION_HISTORY=0
 alias bashhistory='$EDITOR ~/.bash_history'
 alias zprofile='$EDITOR ~/.zprofile'
@@ -91,11 +103,11 @@ alias gitconfig='$EDITOR ~/.gitconfig'
 alias gitignore='$EDITOR ~/.gitignore'
 
 alias npg='npm list --depth=0 -g'
-alias npu='npm outdated -g --depth=0'
-alias npf='/Users/kotamrs/.nvm/versions/node/v6.9.5/lib/node_modules'
+alias npmu='npm outdated -g --depth=0'
+alias npmup='npm update -g'
 alias brg='brew list --versions'
 alias brewup='brew update && brew upgrade && brew cleanup; brew doctor'
-alias nvm0='nvm use 0'
+
 
 # use tab to complete from the list
 bind TAB:menu-complete
