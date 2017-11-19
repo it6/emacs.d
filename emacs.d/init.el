@@ -821,6 +821,24 @@ In case the execution fails, return an error."
   (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
 
 ;;----------------------------------------------------------------------------
+;; setup clang-format and execute C programs configuration
+;; (add-hook 'before-save-hook 'clang-format-before-save).
+;;----------------------------------------------------------------------------
+(use-package clang-format)
+(defun clang-format-before-save ()
+  "Add this to .emacs to clang-format on save."
+  (interactive)
+  (when (eq major-mode 'c-mode) (clang-format-buffer)))
+
+;; install hook to use clang-format on save
+(add-hook 'before-save-hook 'clang-format-before-save)
+
+(eval-after-load 'cc-mode
+  '(define-key c-mode-map (kbd "C-c e")
+     '(lambda ()  (interactive) (defvar sk-build-command)
+        (setq sk-build-command (concat "clang " (buffer-name) " && ./a.out")) (shell-command sk-build-command) )))
+
+;;----------------------------------------------------------------------------
 ;; load yasnippets
 ;;----------------------------------------------------------------------------
 (use-package yasnippet
@@ -923,6 +941,7 @@ In case the execution fails, return an error."
   (defvar tide-tsserver-directory)
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
+  (setq-default flycheck-disabled-checkers '(typescript-tide))
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
   (tide-hl-identifier-mode +1))
 
@@ -1273,7 +1292,6 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
