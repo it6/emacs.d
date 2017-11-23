@@ -190,18 +190,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; show file path in frame title
 ;;----------------------------------------------------------------------------
-;; (setq-default frame-title-format
-;;               '(:eval
-;;                 (format "%s  %s"
-;;                         (buffer-name)
-;;                         (cond
-;;                          (buffer-file-truename
-;;                           (concat "« " (abbreviate-file-name default-directory) " »"))
-;;                          (dired-directory
-;;                           (concat "« " dired-directory " »"))
-;;                          (t
-;;                           "« no file »")))))
-
 (setq frame-title-format
       '(:eval (if (buffer-file-name)
                   (abbreviate-file-name (buffer-file-name)) "%b")))
@@ -820,23 +808,6 @@ In case the execution fails, return an error."
   :init
   (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
 
-;;----------------------------------------------------------------------------
-;; setup clang-format and execute C programs configuration
-;; (add-hook 'before-save-hook 'clang-format-before-save).
-;;----------------------------------------------------------------------------
-(use-package clang-format)
-(defun clang-format-before-save ()
-  "Add this to .emacs to clang-format on save."
-  (interactive)
-  (when (eq major-mode 'c-mode) (clang-format-buffer)))
-
-;; install hook to use clang-format on save
-(add-hook 'before-save-hook 'clang-format-before-save)
-
-(eval-after-load 'cc-mode
-  '(define-key c-mode-map (kbd "C-c e")
-     '(lambda ()  (interactive) (defvar sk-build-command)
-        (setq sk-build-command (concat "clang " (buffer-name) " && ./a.out")) (shell-command sk-build-command) )))
 
 ;;----------------------------------------------------------------------------
 ;; load yasnippets
@@ -941,7 +912,7 @@ In case the execution fails, return an error."
   (defvar tide-tsserver-directory)
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
-  (setq-default flycheck-disabled-checkers '(typescript-tide))
+  (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
   (tide-hl-identifier-mode +1))
 
