@@ -25,11 +25,6 @@
 (setq inhibit-default-init t)
 
 ;;----------------------------------------------------------------------------
-;; Prefer newest version of a file
-;;----------------------------------------------------------------------------
-(setq load-prefer-newer t)
-
-;;----------------------------------------------------------------------------
 ;; Activate packages and add the MELPA package archive
 ;;----------------------------------------------------------------------------
 (package-initialize)
@@ -106,7 +101,7 @@
 (require 'use-package)
 
 ;;----------------------------------------------------------------------------
-;; don't load outdated byte code
+;; don't load outdated byte code, prefer newest version of a file
 ;;----------------------------------------------------------------------------
 (setq load-prefer-newer t)
 
@@ -114,6 +109,11 @@
 ;; go download any missing packages
 ;;----------------------------------------------------------------------------
 (setq use-package-always-ensure t)
+
+;;----------------------------------------------------------------------------
+;; use package wgrep to edit multiple search results
+;;----------------------------------------------------------------------------
+(use-package wgrep)
 
 ;;----------------------------------------------------------------------------
 ;; set path on mac
@@ -140,7 +140,7 @@
   (menu-bar-mode -1))
 
 ;; ----------------------------------------------------------------------------
-;; scroll by one line, try leaving cursor in place
+;; scroll up/down by one line, try leaving cursor in place
 ;; ----------------------------------------------------------------------------
 (defun scroll-in-place (scroll-up)
   "Scroll window up (or down) without moving point (if possible).
@@ -214,7 +214,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; set regular font and unicode characters needs unicode font
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "Operator Mono")
-(setq default-frame-alist '((font . "Operator Mono-14")))
+(setq default-frame-alist '((font . "Operator Mono-13")))
 
 ;;----------------------------------------------------------------------------
 ;; treat all themes as safe
@@ -224,7 +224,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
-
 (use-package color-theme-sanityinc-tomorrow
   :config
   (load-theme 'sanityinc-tomorrow-eighties t))
@@ -261,16 +260,14 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (setq disabled-command-function nil)
 
 ;;----------------------------------------------------------------------------
+;; change all prompts to y or n
+;;----------------------------------------------------------------------------
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;;----------------------------------------------------------------------------
 ;; indicate minibuffer recursion depth
 ;;----------------------------------------------------------------------------
 (minibuffer-depth-indicate-mode)
-
-;;----------------------------------------------------------------------------
-;; set indent/tab width to 2 spaces
-;;----------------------------------------------------------------------------
-(defvar css-indent-offset 2)
-(defvar typescript-indent-level 2)
-(defvar js-indent-level 2)
 
 ;;----------------------------------------------------------------------------
 ;; cleanup whitespace before saving a file
@@ -308,6 +305,7 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
+(add-to-list 'auto-mode-alist '("\\.svg$" . xml-mode))
 
 ;;----------------------------------------------------------------------------
 ;; rename both buffer and file name
@@ -373,12 +371,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; Don't use dialogs for minibuffer input
 ;;----------------------------------------------------------------------------
 (setq use-dialog-box nil)
-
-;;----------------------------------------------------------------------------
-;; Use spaces instead of tabs and set default tab width
-;;----------------------------------------------------------------------------
-(setq-default indent-tabs-mode nil)
-(setq-default tab-width 4)
 
 ;;----------------------------------------------------------------------------
 ;; ignore case on completion
@@ -531,12 +523,6 @@ Version 2015-12-08"
 (global-set-key (kbd "C-c c c") 'xah-clear-register-1)
 
 ;;----------------------------------------------------------------------------
-;; make searches case sensitive
-;; make dabbrev completion case sensitive
-;;----------------------------------------------------------------------------
-(defvar dabbrev-case-fold-search nil)
-
-;;----------------------------------------------------------------------------
 ;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
 ;;----------------------------------------------------------------------------
 (defun backward-up-sexp (arg)
@@ -639,11 +625,6 @@ In case the execution fails, return an error."
 (global-set-key (kbd "C-c o b") 'browse-url-of-file)
 
 ;;----------------------------------------------------------------------------
-;; change all prompts to y or n
-;;----------------------------------------------------------------------------
-(fset 'yes-or-no-p 'y-or-n-p)
-
-;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
 ;;----------------------------------------------------------------------------
 (use-package smex
@@ -651,7 +632,7 @@ In case the execution fails, return an error."
   (setq smex-save-file (locate-user-emacs-file "cache/smex-items")))
 
 ;;----------------------------------------------------------------------------
-;; save recent files list
+;; save recent files list, exclude .git elpa folders
 ;;----------------------------------------------------------------------------
 (use-package recentf
   :config
@@ -753,45 +734,35 @@ In case the execution fails, return an error."
     (defvar css-mode-map)))
 
 ;;----------------------------------------------------------------------------
-;; javascript file build with node and show output
+;; load eslint,tslint from local node_modules when possible
 ;;----------------------------------------------------------------------------
-(eval-after-load 'js
-  (lambda()
-    (define-key js-mode-map (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
-    (define-key js-mode-map (kbd "C-c b") 'web-beautify-js)))
+(defun use-eslint-from-node-modules ()
+  "Load eslint from local node_modules if available."
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (eslint (and root (expand-file-name (if (eq system-type 'windows-nt)
+                                                 "node_modules/.bin/eslint.cmd"
+                                               "node_modules/.bin/eslint")
+                                             root))))
+    (when (and eslint (file-executable-p eslint))
+      (setq-local flycheck-javascript-eslint-executable eslint))))
 
-;;----------------------------------------------------------------------------
-;; enable web beautify mode for js, css, html
-;;----------------------------------------------------------------------------
-(use-package web-beautify)
+(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
 
-(eval-after-load 'json-mode
-  '(define-key json-mode-map (kbd "C-c b") 'json-mode-beautify))
+(defun use-tslint-from-node-modules ()
+  "Load tslint from local node_modules if available."
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (tslint (and root (expand-file-name (if (eq system-type 'windows-nt)
+                                                 "node_modules/.bin/tslint.cmd"
+                                               "node_modules/.bin/tslint")
+                                             root))))
+    (when (and tslint (file-executable-p tslint))
+      (setq-local flycheck-typescript-tslint-executable tslint))))
 
-(eval-after-load 'sgml-mode
-  '(define-key html-mode-map (kbd "C-c b") 'web-beautify-html))
-
-(eval-after-load 'css-mode
-  '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
-
-(eval-after-load 'less-css-mode
-  '(define-key css-mode-map (kbd "C-c b") 'web-beautify-css))
-
-;;----------------------------------------------------------------------------
-;; use Prettier for JS mode formatting
-;; prettier js used to format javascript, useful for react and jsx
-;;----------------------------------------------------------------------------
-(use-package prettier-js
-  :diminish prettier-js-mode
-  :bind ("C-c p f" . prettier-js))
-;; (add-hook 'js-mode-hook 'prettier-js-mode)
-
-;;----------------------------------------------------------------------------
-;; use js-mode for react jsx and disable flycheck
-;;----------------------------------------------------------------------------
-(add-to-list 'auto-mode-alist
-             '("\\.jsx\\'" . (lambda ()
-                               (flycheck-mode -1))))
+(add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
@@ -800,14 +771,6 @@ In case the execution fails, return an error."
   :config
   (add-hook 'markdown-mode-hook #'tildify-mode)
   (add-hook 'markdown-mode-hook #'visual-line-mode))
-
-;;----------------------------------------------------------------------------
-;; use json-mode
-;;----------------------------------------------------------------------------
-(use-package json-mode
-  :init
-  (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
-
 
 ;;----------------------------------------------------------------------------
 ;; load yasnippets
@@ -819,7 +782,9 @@ In case the execution fails, return an error."
   (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
-  :config (yas-reload-all))
+  :config
+  (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
+  (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
 ;; auto generate closing brackets globally using Electric pair mode
@@ -828,20 +793,17 @@ In case the execution fails, return an error."
 
 ;;----------------------------------------------------------------------------
 ;; enable global electric-indent-mode
-;;----------------------------------------------------------------------------
+;; ----------------------------------------------------------------------------
 (setq-default electric-indent-inhibit t)
 
-;; ----------------------------------------------------------------------------
-;; less mode
-;; ----------------------------------------------------------------------------
-(use-package less-css-mode)
-
 ;;----------------------------------------------------------------------------
-;; use Avy to jump between words in visible buffers
+;; set feature mode to edit Gherkin feature files
+;; feature-mode needs a hook to diminish orgtbl-mode
 ;;----------------------------------------------------------------------------
-(use-package avy
-  :bind
-  ("C-;" . avy-goto-char))
+(use-package feature-mode)
+(add-hook 'feature-mode-hook
+          (lambda ()
+            (diminish 'orgtbl-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -850,6 +812,74 @@ In case the execution fails, return an error."
   :config
   (global-flycheck-mode)
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
+
+;;----------------------------------------------------------------------------
+;; enable web beautify mode for js, css, html
+;;----------------------------------------------------------------------------
+(use-package web-beautify)
+
+;;----------------------------------------------------------------------------
+;; use Prettier for JS mode formatting
+;; prettier js used to format javascript, useful for react and jsx
+;;----------------------------------------------------------------------------
+(use-package prettier-js
+  :diminish prettier-js-mode)
+
+;;----------------------------------------------------------------------------
+;; javascript mode hook keybindings
+;;----------------------------------------------------------------------------
+(add-hook 'js-mode-hook
+          (lambda ()
+            (prettier-js-mode)
+            (defvar js-indent-level nil)
+            (setq js-indent-level 2)
+            (local-set-key (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
+            (local-set-key (kbd "C-c b") 'web-beautify-js)
+            (local-set-key (kbd "C-c p") 'prettier-js)))
+
+;;----------------------------------------------------------------------------
+;; set typescript mode
+;; use default tsserver that comes bundled with tide
+;; run the following in EVAL to find which tsserver.js is being used
+;; (tide-locate-tsserver-executable)
+;;----------------------------------------------------------------------------
+(defun setup-tide-mode ()
+  "Setup tide mode."
+  (interactive)
+  (defvar tide-tsserver-executable)
+  (defvar tide--tsserver)
+  (defvar tide-tsserver-directory)
+  (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
+  (tide-setup)
+  (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
+  (setq flycheck-check-syntax-automatically '(save mode-enabled))
+  (company-mode +1)
+  (tide-hl-identifier-mode +1))
+
+(use-package tide
+  :diminish tide-mode
+  :config
+  (defvar typescript-indent-level nil)
+  (setq typescript-indent-level 2)
+  (define-key tide-mode-map (kbd "C-c p") 'prettier-js)
+  (define-key tide-mode-map (kbd "C-c b") 'tide-format)
+  (define-key tide-mode-map (kbd "C-c F") 'tide-fix))
+
+(add-hook 'typescript-mode-hook #'setup-tide-mode)
+
+;;----------------------------------------------------------------------------
+;; use json-mode
+;;----------------------------------------------------------------------------
+(use-package json-mode
+  :init
+  (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
+
+;;----------------------------------------------------------------------------
+;; json mode hook keybindings
+;;----------------------------------------------------------------------------
+(add-hook 'json-mode-hook
+          (lambda ()
+            (local-set-key (kbd "C-c b") 'json-mode-beautify)))
 
 ;;----------------------------------------------------------------------------
 ;; use tagedit for working with html, adds quotes after equals and provides
@@ -867,61 +897,41 @@ In case the execution fails, return an error."
 (add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
 
 ;;----------------------------------------------------------------------------
-;; load eslint,tslint from local node_modules when possible
+;; html mode hook keybindings
 ;;----------------------------------------------------------------------------
-(defun use-eslint-from-node-modules ()
-  "Load eslint from local node_modules if available."
-  (let* ((root (locate-dominating-file
-                (or (buffer-file-name) default-directory)
-                "node_modules"))
-         (eslint (and root
-                      (expand-file-name "node_modules/eslint/bin/eslint.js"
-                                        root))))
-    (when (and eslint (file-executable-p eslint))
-      (setq-local flycheck-javascript-eslint-executable eslint))))
+(add-hook 'sgml-mode-hook
+          (lambda ()
+            (local-set-key (kbd "C-c b") 'web-beautify-html)))
 
-(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
-
-(defun use-tslint-from-node-modules ()
-  "Load tslint from local node_modules if available."
-  (let* ((root (locate-dominating-file
-                (or (buffer-file-name) default-directory)
-                "node_modules"))
-         (tslint (and root
-                      (expand-file-name (if (eq system-type 'windows-nt)
-                                            "node_modules/.bin/tslint.cmd"
-                                          "node_modules/.bin/tslint")
-                                        root))))
-    (when (and tslint (file-executable-p tslint))
-      (setq-local flycheck-typescript-tslint-executable tslint))))
-
-(add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
+;; ----------------------------------------------------------------------------
+;; less mode
+;; ----------------------------------------------------------------------------
+(use-package less-css-mode)
 
 ;;----------------------------------------------------------------------------
-;; set typescript mode
+;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
 ;;----------------------------------------------------------------------------
-;; use default tsserver that comes bundled with tide
-;; run the following in EVAL to find which tsserver.js is being used
-;; (tide-locate-tsserver-executable)
-
-(defun setup-tide-mode ()
-  "Setup tide mode."
-  (interactive)
-  (defvar tide-tsserver-executable)
-  (defvar tide--tsserver)
-  (defvar tide-tsserver-directory)
-  (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
-  (tide-setup)
-  (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
-  (setq flycheck-check-syntax-automatically '(save mode-enabled))
-  (tide-hl-identifier-mode +1))
-
-(use-package tide
-  :diminish tide-mode
+(use-package rainbow-mode
+  :diminish rainbow-mode
   :config
-  (define-key tide-mode-map (kbd "C-c b") 'tide-format))
+  (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook sass-mode-hook))
+    (add-hook hook 'rainbow-mode)))
 
-(add-hook 'typescript-mode-hook #'setup-tide-mode)
+;;----------------------------------------------------------------------------
+;; css mode hook keybindings
+;;----------------------------------------------------------------------------
+(add-hook 'css-mode-hook
+          (lambda ()
+            (defvar css-indent-offset nil)
+            (setq css-indent-offset 2)
+            (local-set-key (kbd "C-c b") 'web-beautify-css)))
+
+;;----------------------------------------------------------------------------
+;; less/sass mode hook keybindings
+;;----------------------------------------------------------------------------
+(add-hook 'less-css-mode-hook
+          (lambda ()
+            (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;;----------------------------------------------------------------------------
 ;; use diff-hl mode, shows git diff in the gutter
@@ -941,13 +951,15 @@ In case the execution fails, return an error."
     (diff-hl-margin-mode)))
 
 ;;----------------------------------------------------------------------------
-;; set feature mode to edit Gherkin feature files
-;; feature-mode needs a hook to diminish orgtbl-mode
+;; Magit
 ;;----------------------------------------------------------------------------
-(use-package feature-mode)
-(add-hook 'feature-mode-hook
-          (lambda ()
-            (diminish 'orgtbl-mode)))
+(use-package magit
+  :config
+  (magit-define-popup-switch 'magit-push-popup ?u
+    "Set upstream" "--set-upstream")
+  (add-hook 'magit-mode-hook 'visual-line-mode)
+  :bind (("C-c l" . magit-log-buffer-file)
+         ("C-x g" . magit-status)))
 
 ;;----------------------------------------------------------------------------
 ;; Ivy
@@ -993,6 +1005,13 @@ In case the execution fails, return an error."
         "rg -i -M 120 --no-heading --line-number --color never '%s' %s"))
 
 ;;----------------------------------------------------------------------------
+;; use Avy to jump between words in visible buffers
+;;----------------------------------------------------------------------------
+(use-package avy
+  :bind
+  ("C-;" . avy-goto-char))
+
+;;----------------------------------------------------------------------------
 ;; Swiper
 ;;----------------------------------------------------------------------------
 (use-package swiper
@@ -1027,30 +1046,69 @@ In case the execution fails, return an error."
     ("q" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
-;; Magit
+;; make searches case sensitive
+;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
-(use-package magit
+(defvar dabbrev-case-fold-search nil)
+
+;;----------------------------------------------------------------------------
+;; Company mode
+;;----------------------------------------------------------------------------
+(use-package company
+  :ensure t
+  :diminish company-mode
+  :commands global-company-mode
+  :init
+  (add-hook 'after-init-hook #'global-company-mode)
   :config
-  (magit-define-popup-switch 'magit-push-popup ?u
-                             "Set upstream" "--set-upstream")
-  (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind (("C-c l" . magit-log-buffer-file)
-         ("C-x g" . magit-status)))
+  (setq company-frontends
+        '(company-pseudo-tooltip-unless-just-one-frontend
+          company-preview-if-just-one-frontend))
+  (setq company-backends '(company-css
+                           company-capf
+                           company-files
+                           (company-dabbrev-code company-keywords)
+                           company-dabbrev))
+  (setq company-tooltip-align-annotations t)
+  (setq company-tooltip-flip-when-above t)
+  (setq company-idle-delay 0.4)
+  (setq company-minimum-prefix-length 3)
+  (setq company-selection-wrap-around t)
+  (setq company-show-numbers t)
+  (setq company-dabbrev-downcase nil)
+  (setq company-dabbrev-other-buffers nil)
+  (setq company-dabbrev-ignore-case t)
+  (setq company-dabbrev-code-everywhere t)
+
+  (let ((map company-active-map))
+    (mapc (lambda (x) (define-key map (format "%d" x) 'ora-company-number))
+          (number-sequence 0 9))
+    (define-key map " " (lambda ()
+                          (interactive)
+                          (company-abort)
+                          (self-insert-command 1)))
+    (define-key map (kbd "<return>") nil)))
+
+(defun ora-company-number ()
+  "Forward to `company-complete-number'.
+Unless the number is potentially part of the candidate.
+In that case, insert the number."
+  (interactive)
+  (let* ((k (this-command-keys))
+         (re (concat "^" company-prefix k)))
+    (if (cl-find-if (lambda (s) (string-match re s))
+                    company-candidates)
+        (self-insert-command 1)
+      (company-complete-number
+       (if (equal k "0")
+           10
+         (string-to-number k))))))
 
 ;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
   :bind ("C-c r" . rg))
-
-;;----------------------------------------------------------------------------
-;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
-;;----------------------------------------------------------------------------
-(use-package rainbow-mode
-  :diminish rainbow-mode
-  :config
-  (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook sass-mode-hook))
-    (add-hook hook 'rainbow-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; Move buffers between frames
@@ -1101,15 +1159,15 @@ In case the execution fails, return an error."
 ;; use M-S-up and M-S-down, which will work even in lisp modes.
 ;;----------------------------------------------------------------------------
 (use-package move-dup
-  :bind (("M-<up>" . md/move-lines-up)
-         ("M-<down>" . md/move-lines-down)
+  :bind (("C-," . md/move-lines-up)
+         ("C-." . md/move-lines-down)
          ("C-c d d" . md/duplicate-down)
          ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
 ;; delete matching pairs
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c p d") 'delete-pair)
+(global-set-key (kbd "C-c d p") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
 ;; delete selection when pasting text
@@ -1226,11 +1284,6 @@ Call a second time to restore the original window configuration."
   (global-page-break-lines-mode))
 
 ;;----------------------------------------------------------------------------
-;; use package wgrep to edit multiple search results
-;;----------------------------------------------------------------------------
-(use-package wgrep)
-
-;;----------------------------------------------------------------------------
 ;; kill back to indentation
 ;;----------------------------------------------------------------------------
 (defun kill-back-to-indentation ()
@@ -1240,7 +1293,18 @@ Call a second time to restore the original window configuration."
     (back-to-indentation)
     (kill-region (point) prev-pos)))
 
-(global-set-key (kbd "C-M-<backspace>") 'kill-back-to-indentation)
+(global-set-key (kbd "C-S-k") 'kill-back-to-indentation)
+
+;;----------------------------------------------------------------------------
+;; kill entire line to indentation
+;;----------------------------------------------------------------------------
+(defun smart-kill-whole-line (&optional arg)
+  "A wrapper around that respects indentation and arguments ARG."
+  (interactive "P")
+  (kill-whole-line arg)
+  (back-to-indentation))
+
+(global-set-key [remap kill-whole-line] 'smart-kill-whole-line)
 
 ;;----------------------------------------------------------------------------
 ;; removes default key binding for M-left and M-right
@@ -1248,6 +1312,13 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 (global-unset-key [M-left])
 (global-unset-key [M-right])
+
+;;----------------------------------------------------------------------------
+;; use evil nerd commenter for comments
+;;----------------------------------------------------------------------------
+(use-package evil-nerd-commenter
+  :config
+  (global-set-key (kbd "M-;") 'evilnc-comment-or-uncomment-lines))
 
 ;;----------------------------------------------------------------------------
 ;; show matching parens
@@ -1263,6 +1334,7 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
 
 
 
