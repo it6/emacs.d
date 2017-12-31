@@ -270,6 +270,11 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (minibuffer-depth-indicate-mode)
 
 ;;----------------------------------------------------------------------------
+;; Enable recursive minibuffers
+;;----------------------------------------------------------------------------
+(setq enable-recursive-minibuffers t)
+
+;;----------------------------------------------------------------------------
 ;; cleanup whitespace before saving a file
 ;;----------------------------------------------------------------------------
 (add-hook 'before-save-hook 'whitespace-cleanup)
@@ -800,10 +805,11 @@ In case the execution fails, return an error."
 ;; set feature mode to edit Gherkin feature files
 ;; feature-mode needs a hook to diminish orgtbl-mode
 ;;----------------------------------------------------------------------------
-(use-package feature-mode)
-(add-hook 'feature-mode-hook
-          (lambda ()
-            (diminish 'orgtbl-mode)))
+(use-package feature-mode
+  :init
+  (add-hook 'feature-mode-hook
+            (lambda ()
+              (diminish 'orgtbl-mode))))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -811,7 +817,7 @@ In case the execution fails, return an error."
 (use-package flycheck
   :config
   (global-flycheck-mode)
-  (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint)))
+  (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint json-python-json)))
 
 ;;----------------------------------------------------------------------------
 ;; enable web beautify mode for js, css, html
@@ -869,17 +875,13 @@ In case the execution fails, return an error."
 
 ;;----------------------------------------------------------------------------
 ;; use json-mode
+;; json mode hook keybindings
 ;;----------------------------------------------------------------------------
 (use-package json-mode
   :init
-  (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode)))
-
-;;----------------------------------------------------------------------------
-;; json mode hook keybindings
-;;----------------------------------------------------------------------------
-(add-hook 'json-mode-hook
-          (lambda ()
-            (local-set-key (kbd "C-c b") 'json-mode-beautify)))
+  (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode))
+  :bind
+  (("C-c b" . json-mode-beautify)))
 
 ;;----------------------------------------------------------------------------
 ;; use tagedit for working with html, adds quotes after equals and provides
@@ -904,9 +906,10 @@ In case the execution fails, return an error."
             (local-set-key (kbd "C-c b") 'web-beautify-html)))
 
 ;; ----------------------------------------------------------------------------
-;; less mode
+;; less mode, and web beautify css
 ;; ----------------------------------------------------------------------------
-(use-package less-css-mode)
+(use-package less-css-mode
+  :bind ("C-c b" . web-beautify-css))
 
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
@@ -924,13 +927,6 @@ In case the execution fails, return an error."
           (lambda ()
             (defvar css-indent-offset nil)
             (setq css-indent-offset 2)
-            (local-set-key (kbd "C-c b") 'web-beautify-css)))
-
-;;----------------------------------------------------------------------------
-;; less/sass mode hook keybindings
-;;----------------------------------------------------------------------------
-(add-hook 'less-css-mode-hook
-          (lambda ()
             (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;;----------------------------------------------------------------------------
@@ -967,13 +963,17 @@ In case the execution fails, return an error."
 (use-package ivy
   :ensure ivy-hydra
   :diminish ivy-mode
-  :bind (
-         ("C-x b" . ivy-switch-buffer)
+  :bind (("C-x b" . ivy-switch-buffer)
          :map ivy-minibuffer-map
          ("<return>" . ivy-alt-done))
+  :bind (:map ivy-switch-buffer-map
+              ("C-k" . ivy-switch-buffer-kill))
   :init
   (add-hook 'after-init-hook #'ivy-mode)
   :config
+  ;; osx doesn't have -d flag for xargs
+  (defvar counsel-find-file-occur-cmd "ls | grep -i -E '%s' | tr '\\n' '\\0' | xargs -0 ls"
+    "Format string for `counsel-find-file-occur'.")
   (setq ivy-use-selectable-prompt t)
   (setq ivy-initial-inputs-alist nil)
   (setq ivy-use-virtual-buffers t)
@@ -992,7 +992,7 @@ In case the execution fails, return an error."
          ("C-c f" . counsel-git)
          ("C-c s" . counsel-rg)
          ("C-s" . counsel-grep-or-swiper)
-         ("C-c m" . counsel-bookmark)
+         ("C-x r b" . counsel-bookmark)
          ("M-y" . counsel-yank-pop)
          :map ivy-minibuffer-map
          ("M-y" . ivy-next-line))
@@ -1002,7 +1002,7 @@ In case the execution fails, return an error."
   :config
   (setq counsel-find-file-at-point t)
   (setq counsel-grep-base-command
-        "rg -i -M 120 --no-heading --line-number --color never '%s' %s"))
+        "rg -i -M 120 --no-heading --line-number --color never %s %s"))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
@@ -1131,8 +1131,8 @@ In that case, insert the number."
 
 ;;----------------------------------------------------------------------------
 ;; winner mode for saving windows layouts and toggle between them
+;; undo and redo window configuration
 ;;----------------------------------------------------------------------------
-;; Undo and redo the window configuration
 (use-package winner
   :bind (:map winner-mode-map
               ("C-c w u" . winner-undo)
