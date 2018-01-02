@@ -3,6 +3,7 @@
 ;;; Code:
 
 
+
 ;;----------------------------------------------------------------------------
 ;; Delay garbage collection during startup
 ;;----------------------------------------------------------------------------
@@ -12,7 +13,7 @@
 ;; Reset garbage collection threshold value to default after startup
 ;;----------------------------------------------------------------------------
 (add-hook 'after-init-hook
-          (lambda () (setq gc-cons-threshold 400000)))
+    (lambda () (setq gc-cons-threshold 400000)))
 
 ;;----------------------------------------------------------------------------
 ;; Set default directory for save files
@@ -29,7 +30,7 @@
 ;;----------------------------------------------------------------------------
 (package-initialize)
 (add-to-list 'package-archives
-             '("melpa" . "https://melpa.org/packages/"))
+       '("melpa" . "https://melpa.org/packages/"))
 
 ;;----------------------------------------------------------------------------
 ;; Bootstrap use-package
@@ -84,36 +85,21 @@
 (setq kill-do-not-save-duplicates t)
 
 ;;----------------------------------------------------------------------------
-;; Package management
-;; Added by Package.el.  This must come before configurations of
-;; installed packages.  Don't delete this line.  If you don't want it,
-;; just comment it out by adding a semicolon to the start of the line.
-;; You may delete these explanatory comments.
-;;----------------------------------------------------------------------------
-(package-initialize)
-
-;;----------------------------------------------------------------------------
-;; list the packages you want to install/load for now use-package is all I need
-;;----------------------------------------------------------------------------
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
-(require 'use-package)
-
-;;----------------------------------------------------------------------------
 ;; don't load outdated byte code, prefer newest version of a file
 ;;----------------------------------------------------------------------------
 (setq load-prefer-newer t)
 
 ;;----------------------------------------------------------------------------
+;; removes default key binding for M-left and M-right
+;; train myself to use M-f and M-b instead
+;;----------------------------------------------------------------------------
+(global-unset-key [M-left])
+(global-unset-key [M-right])
+
+;;----------------------------------------------------------------------------
 ;; go download any missing packages
 ;;----------------------------------------------------------------------------
 (setq use-package-always-ensure t)
-
-;;----------------------------------------------------------------------------
-;; use package wgrep to edit multiple search results
-;;----------------------------------------------------------------------------
-(use-package wgrep)
 
 ;;----------------------------------------------------------------------------
 ;; set path on mac
@@ -128,49 +114,6 @@
 (setq use-file-dialog nil)
 (setq inhibit-startup-screen t)
 (setq inhibit-startup-echo-area-message t)
-
-;;----------------------------------------------------------------------------
-;; disable toolbars
-;;----------------------------------------------------------------------------
-(when (fboundp 'tool-bar-mode)
-  (tool-bar-mode -1))
-(when (fboundp 'set-scroll-bar-mode)
-  (set-scroll-bar-mode nil))
-(when (fboundp 'menu-bar-mode)
-  (menu-bar-mode -1))
-
-;; ----------------------------------------------------------------------------
-;; scroll up/down by one line, try leaving cursor in place
-;; ----------------------------------------------------------------------------
-(defun scroll-in-place (scroll-up)
-  "Scroll window up (or down) without moving point (if possible).
-SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
-  (interactive)
-  (let ((pos (point))
-        (col (current-column))
-        (up-or-down (if scroll-up 1 -1)))
-    (scroll-up up-or-down)
-    (if (pos-visible-in-window-p pos)
-        (goto-char pos)
-      (if (or (eq last-command 'next-line)
-              (eq last-command 'previous-line))
-          (move-to-column temporary-goal-column)
-        (move-to-column col)
-        (setq temporary-goal-column col))
-      (setq this-command 'next-line))))
-
-(defun scroll-up-in-place ()
-  "Scroll window up without moving point (if possible)."
-  (interactive)
-  (scroll-in-place t))
-
-(defun scroll-down-in-place ()
-  "Scroll window up without moving point (if possible)."
-  (interactive)
-  (scroll-in-place nil))
-
-(global-set-key (read-kbd-macro "C-s-n") 'scroll-up-in-place)
-(global-set-key (read-kbd-macro "C-s-p") 'scroll-down-in-place)
 
 ;; ----------------------------------------------------------------------------
 ;; some basic preferences
@@ -188,65 +131,14 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
  truncate-partial-width-windows nil)
 
 ;;----------------------------------------------------------------------------
-;; show file path in frame title
-;;----------------------------------------------------------------------------
-(setq frame-title-format
-      '(:eval (if (buffer-file-name)
-                  (abbreviate-file-name (buffer-file-name)) "%b")))
-
-;;----------------------------------------------------------------------------
-;; don't use ls command for dired mode
-;;----------------------------------------------------------------------------
-(when (string= system-type "darwin")
-  (defvar dired-use-ls-dired nil))
-
-;;----------------------------------------------------------------------------
-;; set default directory for cache
-;;----------------------------------------------------------------------------
-(make-directory (locate-user-emacs-file "cache") t)
-
-;;----------------------------------------------------------------------------
-;; move point all the way when scrolling to buffer boundaries
-;;----------------------------------------------------------------------------
-(setq scroll-error-top-bottom t)
-
-;;----------------------------------------------------------------------------
-;; set regular font and unicode characters needs unicode font
-;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Operator Mono")
-(setq default-frame-alist '((font . "Operator Mono-13")))
-
-;;----------------------------------------------------------------------------
 ;; treat all themes as safe
 ;;----------------------------------------------------------------------------
 (setq custom-safe-themes t)
 
 ;;----------------------------------------------------------------------------
-;; set default color theme
+;; move point all the way when scrolling to buffer boundaries
 ;;----------------------------------------------------------------------------
-(use-package color-theme-sanityinc-tomorrow
-  :config
-  (load-theme 'sanityinc-tomorrow-eighties t))
-
-;; (use-package eclipse-theme
-;;   :config
-;;   (load-theme 'eclipse t))
-
-;; (when (image-type-available-p 'xpm)
-;;   (use-package powerline
-;;     :config
-;;     (setq powerline-display-buffer-size nil)
-;;     (setq powerline-display-mule-info nil)
-;;     (setq powerline-display-hud nil)
-;;     (when (display-graphic-p)
-;;       (powerline-default-theme)
-;;       (remove-hook 'focus-out-hook 'powerline-unset-selected-window))))
-
-;;----------------------------------------------------------------------------
-;; reopen desktop with same size as last closed session
-;;----------------------------------------------------------------------------
-(defvar desktop-base-file-name (locate-user-emacs-file "cache/emacs-desktop"))
-(desktop-save-mode 1)
+(setq scroll-error-top-bottom t)
 
 ;;----------------------------------------------------------------------------
 ;; set option as super key and command as meta key
@@ -265,16 +157,6 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;;----------------------------------------------------------------------------
-;; indicate minibuffer recursion depth
-;;----------------------------------------------------------------------------
-(minibuffer-depth-indicate-mode)
-
-;;----------------------------------------------------------------------------
-;; Enable recursive minibuffers
-;;----------------------------------------------------------------------------
-(setq enable-recursive-minibuffers t)
-
-;;----------------------------------------------------------------------------
 ;; cleanup whitespace before saving a file
 ;;----------------------------------------------------------------------------
 (add-hook 'before-save-hook 'whitespace-cleanup)
@@ -285,54 +167,11 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (setq x-stretch-cursor t)
 
 ;;----------------------------------------------------------------------------
-;; simple visible bell which works in all terminal types
+;; show file path in frame title
 ;;----------------------------------------------------------------------------
-(defun flash-mode-line ()
-  "Flash modeline on bad commands."
-  (invert-face 'mode-line)
-  (run-with-timer 0.05 nil 'invert-face 'mode-line))
-
-(setq-default
- ring-bell-function 'flash-mode-line)
-
-;;----------------------------------------------------------------------------
-;; Use Ibuffer for Buffer List
-;;----------------------------------------------------------------------------
-(use-package ibuffer
-  :bind ([remap list-buffers] . ibuffer)
-  :config
-  (setq ibuffer-default-sorting-mode 'major-mode))
-
-;;----------------------------------------------------------------------------
-;; use conf-unix-mode for default dot files
-;;----------------------------------------------------------------------------
-(add-to-list 'auto-mode-alist '("\\.npmrc\\'" . conf-unix-mode))
-(add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
-(add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
-(add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
-(add-to-list 'auto-mode-alist '("\\.svg$" . xml-mode))
-
-;;----------------------------------------------------------------------------
-;; rename both buffer and file name
-;;----------------------------------------------------------------------------
-(defun rename-this-buffer-and-file ()
-  "Renames current buffer and file it is visiting."
-  (interactive)
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (if (not (and filename (file-exists-p filename)))
-        (error "Buffer '%s' is not visiting a file!" name)
-      (let ((new-name (read-file-name "New name: " filename)))
-        (cond ((get-buffer new-name)
-               (error "A buffer named '%s' already exists!" new-name))
-              (t
-               (rename-file filename new-name 1)
-               (rename-buffer new-name)
-               (set-visited-file-name new-name)
-               (set-buffer-modified-p nil)
-               (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
-
-(global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
+(setq frame-title-format
+      '(:eval (if (buffer-file-name)
+      (abbreviate-file-name (buffer-file-name)) "%b")))
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -348,6 +187,11 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 ;; Repeat mark popping
 ;;----------------------------------------------------------------------------
 (setq set-mark-command-repeat-pop t)
+
+;;----------------------------------------------------------------------------
+;; don't open a new frame when emacs is already open
+;;----------------------------------------------------------------------------
+(setq ns-pop-up-frames nil)
 
 ;;----------------------------------------------------------------------------
 ;; use spaces instead of tabs and set default tab width
@@ -378,10 +222,32 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (setq use-dialog-box nil)
 
 ;;----------------------------------------------------------------------------
+;; maximize emacs window-height on load
+;;----------------------------------------------------------------------------
+(setq frame-resize-pixelwise t)
+(add-to-list 'initial-frame-alist '(fullscreen . maximized))
+
+;;----------------------------------------------------------------------------
+;; reopen same file and same window size as last closed session
+;;----------------------------------------------------------------------------
+(defvar desktop-base-file-name (locate-user-emacs-file "cache/emacs-desktop"))
+(desktop-save-mode 1)
+
+;;----------------------------------------------------------------------------
 ;; ignore case on completion
 ;;----------------------------------------------------------------------------
 (setq read-file-name-completion-ignore-case t)
 (setq read-buffer-completion-ignore-case t)
+
+;;----------------------------------------------------------------------------
+;; auto generate closing brackets globally using Electric pair mode
+;;----------------------------------------------------------------------------
+(electric-pair-mode)
+
+;;----------------------------------------------------------------------------
+;; enable global electric-indent-mode
+;; ----------------------------------------------------------------------------
+(setq-default electric-indent-inhibit t)
 
 ;;----------------------------------------------------------------------------
 ;; emacs initial scratch buffer message
@@ -389,43 +255,187 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (setq-default initial-scratch-message "")
 
 ;;----------------------------------------------------------------------------
+;; browse url of file from emacs opens in default browser
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c o b") 'browse-url-of-file)
+
+;;----------------------------------------------------------------------------
+;; delete matching pairs
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-c d p") 'delete-pair)
+
+;;----------------------------------------------------------------------------
+;; rearrange window/buffer size
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "s-<up>") 'enlarge-window)
+(global-set-key (kbd "s-<down>") 'shrink-window)
+(global-set-key (kbd "s-<right>") 'enlarge-window-horizontally)
+(global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
+
+;;----------------------------------------------------------------------------
+;; set M-` to toggle all open EMACS windows
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "M-`") 'ns-next-frame)
+
+;;----------------------------------------------------------------------------
+;; delete selection when pasting text
+;;----------------------------------------------------------------------------
+(delete-selection-mode 1)
+
+;;----------------------------------------------------------------------------
+;; add clipboard kills from other programs to emacs kill ring
+;;----------------------------------------------------------------------------
+(setq save-interprogram-paste-before-kill t)
+
+;;----------------------------------------------------------------------------
+;; Dired configuration
+;;----------------------------------------------------------------------------
+(defvar dired-listing-switches "-ahlF")
+(defvar dired-recursive-deletes 'top)
+(defvar dired-recursive-copies 'always)
+(defvar dired-dwim-target t)
+
+;;----------------------------------------------------------------------------
+;; make searches case sensitive
+;; make dabbrev completion case sensitive
+;;----------------------------------------------------------------------------
+(defvar dabbrev-case-fold-search nil)
+
+;;----------------------------------------------------------------------------
+;; simple visible bell which works in all terminal types
+;;----------------------------------------------------------------------------
+(defun flash-mode-line ()
+  "Flash modeline on bad commands."
+  (invert-face 'mode-line)
+  (run-with-timer 0.05 nil 'invert-face 'mode-line))
+
+(setq-default
+ ring-bell-function 'flash-mode-line)
+
+;;----------------------------------------------------------------------------
+;; set regular font and unicode characters needs unicode font
+;;----------------------------------------------------------------------------
+(set-fontset-font "fontset-default" 'unicode "Operator Mono")
+(setq default-frame-alist '((font . "Operator Mono-13")))
+
+;;----------------------------------------------------------------------------
+;; disable toolbars
+;;----------------------------------------------------------------------------
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+(when (fboundp 'set-scroll-bar-mode)
+  (set-scroll-bar-mode nil))
+(when (fboundp 'menu-bar-mode)
+  (menu-bar-mode -1))
+
+;; ----------------------------------------------------------------------------
+;; scroll up/down by one line, leaving cursor in place
+;; ----------------------------------------------------------------------------
+(defun scroll-in-place (scroll-up)
+  "Scroll window up (or down) without moving point (if possible).
+SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
+  (interactive)
+  (let ((pos (point))
+  (col (current-column))
+  (up-or-down (if scroll-up 1 -1)))
+    (scroll-up up-or-down)
+    (if (pos-visible-in-window-p pos)
+  (goto-char pos)
+      (if (or (eq last-command 'next-line)
+        (eq last-command 'previous-line))
+    (move-to-column temporary-goal-column)
+  (move-to-column col)
+  (setq temporary-goal-column col))
+      (setq this-command 'next-line))))
+
+(defun scroll-up-in-place ()
+  "Scroll window up without moving point (if possible)."
+  (interactive)
+  (scroll-in-place t))
+
+(defun scroll-down-in-place ()
+  "Scroll window up without moving point (if possible)."
+  (interactive)
+  (scroll-in-place nil))
+
+(global-set-key (read-kbd-macro "C-s-n") 'scroll-up-in-place)
+(global-set-key (read-kbd-macro "C-s-p") 'scroll-down-in-place)
+
+;;----------------------------------------------------------------------------
+;; don't use ls command for dired mode
+;;----------------------------------------------------------------------------
+(when (string= system-type "darwin")
+  (defvar dired-use-ls-dired nil))
+
+;;----------------------------------------------------------------------------
+;; use conf-unix-mode for default dot files
+;;----------------------------------------------------------------------------
+(add-to-list 'auto-mode-alist '("\\.npmrc\\'" . conf-unix-mode))
+(add-to-list 'auto-mode-alist '("\\bashrc\\'" . sh-mode))
+(add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
+(add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
+(add-to-list 'auto-mode-alist '("\\.svg$" . xml-mode))
+
+;;----------------------------------------------------------------------------
+;; indent after pasting text into emacs
+;;----------------------------------------------------------------------------
+(defadvice yank (after indent-region activate)
+  "Indent text after pasting."
+  (indent-region (region-beginning) (region-end) nil))
+
+;;----------------------------------------------------------------------------
+;; rename both buffer and file name
+;;----------------------------------------------------------------------------
+(defun rename-this-buffer-and-file ()
+  "Renames current buffer and file it is visiting."
+  (interactive)
+  (let ((name (buffer-name))
+  (filename (buffer-file-name)))
+    (if (not (and filename (file-exists-p filename)))
+  (error "Buffer '%s' is not visiting a file!" name)
+      (let ((new-name (read-file-name "New name: " filename)))
+  (cond ((get-buffer new-name)
+         (error "A buffer named '%s' already exists!" new-name))
+        (t
+         (rename-file filename new-name 1)
+         (rename-buffer new-name)
+         (set-visited-file-name new-name)
+         (set-buffer-modified-p nil)
+         (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
+
+(global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
+
+;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
 ;;----------------------------------------------------------------------------
 (setq initial-major-mode 'js-mode)
 
-(defun unkillable-scratch-buffer ()
+(defun donot-kill-scratch-buffer ()
   "Don't kill scratch buffer."
   (if (or (equal (buffer-name (current-buffer)) "*scratch*") (equal (buffer-name (current-buffer)) "*Messages*"))
       (progn nil) t))
 
-(add-hook 'kill-buffer-query-functions 'unkillable-scratch-buffer)
-
-;;----------------------------------------------------------------------------
-;; maximize emacs window on load
-;;----------------------------------------------------------------------------
-(setq frame-resize-pixelwise t)
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
+(add-hook 'kill-buffer-query-functions 'donot-kill-scratch-buffer)
 
 ;;----------------------------------------------------------------------------
 ;; kill all other open buffers except the current one
 ;; add C-u to kill special buffers too
 ;;----------------------------------------------------------------------------
 (defun kill-other-buffers (&optional *special-buffers)
-  "Kill regular and dired buffers but leave the current one.
-*SPECIAL-BUFFERS is optional 'universal-arugment'
-Don't mess with special buffers."
+  "Kill regular and dired buffers, leave current and special buffers.
+*SPECIAL-BUFFERS is optional 'universal-argument' invoked using `C-u'
+If `universal-argument' is called first, kill special buffers too"
   (interactive "P")
   (if *special-buffers
       (mapc 'kill-buffer (delq (current-buffer) (buffer-list))))
   (progn
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-        (kill-buffer buffer))))
-  (interactive)
+  (kill-buffer buffer))))
   (mapc (lambda (buffer)
-          (when (eq 'dired-mode (buffer-local-value 'major-mode buffer))
-            (kill-buffer buffer)))
-        (buffer-list))
+    (when (eq 'dired-mode (buffer-local-value 'major-mode buffer))
+      (kill-buffer buffer)))
+  (buffer-list))
   (message "Closed all other buffers"))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
@@ -440,19 +450,19 @@ Result is full path.
 If `universal-argument' is called first, copy only the dir path"
   (interactive "P")
   (let ((-fpath
-         (if (equal major-mode 'dired-mode)
-             (expand-file-name default-directory)
-           (if (buffer-file-name)
-               (buffer-file-name)
-             (user-error "Current buffer is not associated with a file")))))
+   (if (equal major-mode 'dired-mode)
+       (expand-file-name default-directory)
+     (if (buffer-file-name)
+         (buffer-file-name)
+       (user-error "Current buffer is not associated with a file")))))
     (kill-new
      (if *dir-path-only-p
-         (progn
-           (message "Directory path copied: %s" (file-name-directory -fpath))
-           (file-name-directory -fpath))
+   (progn
+     (message "Directory path copied: %s" (file-name-directory -fpath))
+     (file-name-directory -fpath))
        (progn
-         (message "File path copied: %s" -fpath)
-         -fpath )))))
+   (message "File path copied: %s" -fpath)
+   -fpath )))))
 
 (global-set-key (kbd "C-c c f") 'surya-copy-file-path)
 
@@ -471,25 +481,13 @@ If not in a Git repo, uses the current directory."
   (interactive)
   (if (git-root-dir)
       (progn
-        (kill-new (git-root-dir))
-        (message "GIT root path copied:%s" (git-root-dir)))
+  (kill-new (git-root-dir))
+  (message "GIT root path copied:%s" (git-root-dir)))
     (progn
       (kill-new default-directory)
       (message "File not in GIT repo, copied default path:%s" default-directory))))
 
 (global-set-key (kbd "C-c c g") 'git-root-path)
-
-;;----------------------------------------------------------------------------
-;; copy current line, takes a universal numerical arugment for n lines
-;;----------------------------------------------------------------------------
-(defun sk-copy-line (arg)
-  "Copy lines (as many as prefix argument ARG) in the kill ring."
-  (interactive "p")
-  (kill-ring-save (line-beginning-position)
-                  (line-beginning-position (+ 1 arg)))
-  (message "%d line%s copied" arg (if (= 1 arg) "" "s")))
-
-(global-set-key (kbd "C-c c l") 'sk-copy-line)
 
 ;;----------------------------------------------------------------------------
 ;; copy/paste/clear current line or selected text to register 1
@@ -504,13 +502,13 @@ Version 2015-12-08"
   (interactive)
   (let ($p1 $p2)
     (if (region-active-p)
-        (progn (setq $p1 (region-beginning))
-               (setq $p2 (region-end)))
+  (progn (setq $p1 (region-beginning))
+         (setq $p2 (region-end)))
       (progn (setq $p1 (line-beginning-position))
-             (setq $p2 (line-end-position))))
+       (setq $p2 (line-end-position))))
     (append-to-register ?1 $p1 $p2)
     (with-temp-buffer (insert "\n")
-                      (append-to-register ?1 (point-min) (point-max)))
+          (append-to-register ?1 (point-min) (point-max)))
     (message "Appended to register 1: 「%s」." (buffer-substring-no-properties $p1 $p2))))
 
 (defun xah-clear-register-1 ()
@@ -535,21 +533,11 @@ Version 2015-12-08"
   (interactive "p")
   (let ((ppss (syntax-ppss)))
     (cond ((elt ppss 3)
-           (goto-char (elt ppss 8))
-           (backward-up-sexp (1- arg)))
-          ((backward-up-list arg)))))
+     (goto-char (elt ppss 8))
+     (backward-up-sexp (1- arg)))
+    ((backward-up-list arg)))))
 
 (global-set-key [remap backward-up-list] 'backward-up-sexp) ; C-M-u, C-M-up
-
-;;----------------------------------------------------------------------------
-;; set M-` to toggle all open EMACS windows
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "M-`") 'ns-next-frame)
-
-;;----------------------------------------------------------------------------
-;; don't open a new frame when emacs is already open
-;;----------------------------------------------------------------------------
-(setq ns-pop-up-frames nil)
 
 ;;----------------------------------------------------------------------------
 ;; launch terminal at the git root or at the current file location
@@ -559,16 +547,16 @@ Version 2015-12-08"
   (interactive "P")
   (if *git-root-path
       (if (git-root-dir)
-          (progn
-            (shell-command
-             (format "open -a Terminal %s"
-                     (git-root-dir))))
-        (progn
-          (message (concat "'" (file-name-nondirectory buffer-file-name) "' is not in git repository"))))
     (progn
       (shell-command
        (format "open -a Terminal %s"
-               (expand-file-name default-directory))))))
+         (git-root-dir))))
+  (progn
+    (message (concat "'" (file-name-nondirectory buffer-file-name) "' is not in git repository"))))
+    (progn
+      (shell-command
+       (format "open -a Terminal %s"
+         (expand-file-name default-directory))))))
 
 (bind-key "C-c o t" 'surya/open-Terminal-here)
 
@@ -607,8 +595,8 @@ In case the execution fails, return an error."
   "Display current file/directory in a Finder window.  PATH BEHIND can be passed."
   (interactive)
   (let ((item (or path
-                  buffer-file-name
-                  (and (eq major-mode 'dired-mode) default-directory))))
+      buffer-file-name
+      (and (eq major-mode 'dired-mode) default-directory))))
     (cond
      ((not (stringp item)))
      ((file-remote-p item)
@@ -620,14 +608,148 @@ In case the execution fails, return an error."
        item
        "\" as POSIX file)\n"
        (unless behind
-         "tell application \"Finder\" to activate"))))))
+   "tell application \"Finder\" to activate"))))))
 
 (global-set-key (kbd "C-c o f") 'show-in-finder)
 
 ;;----------------------------------------------------------------------------
-;; browse url of file from emacs opens in default browser
+;; load eslint,tslint from local node_modules when possible
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c o b") 'browse-url-of-file)
+(defun use-eslint-from-node-modules ()
+  "Load eslint from local node_modules if available."
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (eslint (and root (expand-file-name (if (eq system-type 'windows-nt)
+                                                 "node_modules/.bin/eslint.cmd"
+                                               "node_modules/.bin/eslint")
+                                             root))))
+    (when (and eslint (file-executable-p eslint))
+      (defvar flycheck-javascript-eslint-executable nil)
+      (setq-local flycheck-javascript-eslint-executable eslint))))
+
+(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
+
+(defun use-tslint-from-node-modules ()
+  "Load tslint from local node_modules if available."
+  (let* ((root (locate-dominating-file
+                (or (buffer-file-name) default-directory)
+                "node_modules"))
+         (tslint (and root (expand-file-name (if (eq system-type 'windows-nt)
+                                                 "node_modules/.bin/tslint.cmd"
+                                               "node_modules/.bin/tslint")
+                                             root))))
+    (when (and tslint (file-executable-p tslint))
+      (defvar flycheck-typescript-tslint-executable nil)
+      (setq-local flycheck-typescript-tslint-executable tslint))))
+
+(add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
+
+;;----------------------------------------------------------------------------
+;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
+;;----------------------------------------------------------------------------
+(defun sk/split-window()
+  "Split the window to see the most recent buffer in the other window.
+Call a second time to restore the original window configuration."
+  (interactive)
+  (if (eq last-command 'sk/split-window)
+      (progn
+        (jump-to-register :sk/split-window)
+        (setq this-command 'sk/unsplit-window))
+    (window-configuration-to-register :sk/split-window)
+    (switch-to-buffer-other-window nil)))
+
+(global-set-key (kbd "C-|") 'sk/split-window)
+
+;;----------------------------------------------------------------------------
+;; new line and indent
+;;----------------------------------------------------------------------------
+(defun newline-at-end-of-line ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (move-end-of-line 1)
+  (newline-and-indent))
+
+(global-set-key (kbd "S-<return>") 'newline-at-end-of-line)
+
+(defun newline-before-the-current-line ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (unless (bolp)
+    (beginning-of-line))
+  (newline)
+  (forward-line -1)
+  (indent-according-to-mode))
+
+(global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
+
+;;----------------------------------------------------------------------------
+;; reload update buffer if changed on disk automatically
+;; reload file is updated outside emacs
+;;----------------------------------------------------------------------------
+(global-auto-revert-mode 1)
+(defvar auto-revert-verbose nil)
+(setq auto-revert-verbose nil)
+(defvar global-auto-revert-non-file-buffers nil)
+(setq global-auto-revert-non-file-buffers t)
+(global-set-key (kbd "<f5>") 'revert-buffer)
+
+;;----------------------------------------------------------------------------
+;; kill back to indentation
+;;----------------------------------------------------------------------------
+(defun kill-back-to-indentation ()
+  "Kill from point back to the first non-whitespace character on the line."
+  (interactive)
+  (let ((prev-pos (point)))
+    (back-to-indentation)
+    (kill-region (point) prev-pos)))
+
+(global-set-key (kbd "C-S-k") 'kill-back-to-indentation)
+
+;;----------------------------------------------------------------------------
+;; kill entire line to indentation
+;;----------------------------------------------------------------------------
+(defun smart-kill-whole-line (&optional arg)
+  "A wrapper around that respects indentation and arguments ARG."
+  (interactive "P")
+  (kill-whole-line arg)
+  (back-to-indentation))
+
+(global-set-key [remap kill-whole-line] 'smart-kill-whole-line)
+
+;;----------------------------------------------------------------------------
+;; use package wgrep to edit multiple search results
+;;----------------------------------------------------------------------------
+(use-package wgrep)
+
+;;----------------------------------------------------------------------------
+;; set default color theme
+;;----------------------------------------------------------------------------
+(use-package color-theme-sanityinc-tomorrow
+  :config
+  (load-theme 'sanityinc-tomorrow-eighties t))
+
+;; (use-package eclipse-theme
+;;   :config
+;;   (load-theme 'eclipse t))
+
+;; (when (image-type-available-p 'xpm)
+;;   (use-package powerline
+;;     :config
+;;     (setq powerline-display-buffer-size nil)
+;;     (setq powerline-display-mule-info nil)
+;;     (setq powerline-display-hud nil)
+;;     (when (display-graphic-p)
+;;       (powerline-default-theme)
+;;       (remove-hook 'focus-out-hook 'powerline-unset-selected-window))))
+
+;;----------------------------------------------------------------------------
+;; Use Ibuffer for Buffer List
+;;----------------------------------------------------------------------------
+(use-package ibuffer
+  :bind ([remap list-buffers] . ibuffer)
+  :config
+  (setq ibuffer-default-sorting-mode 'major-mode))
 
 ;;----------------------------------------------------------------------------
 ;; smex gets list of recent files, commands as first option
@@ -643,10 +765,10 @@ In case the execution fails, return an error."
   :config
   (setq recentf-save-file (locate-user-emacs-file "cache/recent-files"))
   (setq recentf-exclude '("/\\.git/.*\\'"
-                          "/elpa/.*\\'"
-                          "/elfeed/.*\\'"
-                          "/cache/.*\\'"
-                          ".*\\.gz\\'"))
+        "/elpa/.*\\'"
+        "/elfeed/.*\\'"
+        "/cache/.*\\'"
+        ".*\\.gz\\'"))
   (setq recentf-max-saved-items 100)
   (setq recentf-max-menu-items 20)
   (setq recentf-auto-cleanup 600)
@@ -675,14 +797,6 @@ In case the execution fails, return an error."
   (add-hook 'after-init-hook #'which-key-mode))
 
 ;;----------------------------------------------------------------------------
-;; Dired configuration
-;;----------------------------------------------------------------------------
-(defvar dired-listing-switches "-ahlF")
-(defvar dired-recursive-deletes 'top)
-(defvar dired-recursive-copies 'always)
-(defvar dired-dwim-target t)
-
-;;----------------------------------------------------------------------------
 ;; hide show modeu
 ;;----------------------------------------------------------------------------
 (use-package hideshow
@@ -690,9 +804,9 @@ In case the execution fails, return an error."
   :diminish hs-minor-mode
   :init
   (dolist (hook '(c-mode-common-hook
-                  prog-mode-hook
-                  emacs-lisp-mode-hook
-                  python-mode-hook))
+      prog-mode-hook
+      emacs-lisp-mode-hook
+      python-mode-hook))
     (add-hook hook #'hs-minor-mode))
   :config
   ;; Unfold when search is active
@@ -720,54 +834,13 @@ In case the execution fails, return an error."
 (use-package highlight-symbol
   :diminish highlight-symbol-mode
   :bind (
-         ("M-n" . highlight-symbol-next)
-         ("M-p" . highlight-symbol-prev))
+   ("M-n" . highlight-symbol-next)
+   ("M-p" . highlight-symbol-prev))
   :init
   (dolist (hook '(prog-mode-hook html-mode-hook css-mode-hook))
     (add-hook hook 'highlight-symbol-mode)
     (add-hook hook 'highlight-symbol-nav-mode))
   (add-hook 'org-mode-hook 'highlight-symbol-nav-mode))
-
-;;----------------------------------------------------------------------------
-;; add js, html, json and css mode maps after compiling
-;;----------------------------------------------------------------------------
-(eval-when-compile
-  (progn
-    (defvar js-mode-map)
-    (defvar json-mode-map)
-    (defvar html-mode-map)
-    (defvar css-mode-map)))
-
-;;----------------------------------------------------------------------------
-;; load eslint,tslint from local node_modules when possible
-;;----------------------------------------------------------------------------
-(defun use-eslint-from-node-modules ()
-  "Load eslint from local node_modules if available."
-  (let* ((root (locate-dominating-file
-                (or (buffer-file-name) default-directory)
-                "node_modules"))
-         (eslint (and root (expand-file-name (if (eq system-type 'windows-nt)
-                                                 "node_modules/.bin/eslint.cmd"
-                                               "node_modules/.bin/eslint")
-                                             root))))
-    (when (and eslint (file-executable-p eslint))
-      (setq-local flycheck-javascript-eslint-executable eslint))))
-
-(add-hook 'flycheck-mode-hook #'use-eslint-from-node-modules)
-
-(defun use-tslint-from-node-modules ()
-  "Load tslint from local node_modules if available."
-  (let* ((root (locate-dominating-file
-                (or (buffer-file-name) default-directory)
-                "node_modules"))
-         (tslint (and root (expand-file-name (if (eq system-type 'windows-nt)
-                                                 "node_modules/.bin/tslint.cmd"
-                                               "node_modules/.bin/tslint")
-                                             root))))
-    (when (and tslint (file-executable-p tslint))
-      (setq-local flycheck-typescript-tslint-executable tslint))))
-
-(add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
 
 ;;----------------------------------------------------------------------------
 ;; markdown mode
@@ -786,20 +859,10 @@ In case the execution fails, return an error."
   (add-hook 'sgml-mode-hook #'yas-minor-mode)
   (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
-                              (yas-minor-mode -1)))
+            (yas-minor-mode -1)))
   :config
   (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
   (yas-reload-all))
-
-;;----------------------------------------------------------------------------
-;; auto generate closing brackets globally using Electric pair mode
-;;----------------------------------------------------------------------------
-(electric-pair-mode)
-
-;;----------------------------------------------------------------------------
-;; enable global electric-indent-mode
-;; ----------------------------------------------------------------------------
-(setq-default electric-indent-inhibit t)
 
 ;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
@@ -829,6 +892,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
+  :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -836,7 +900,6 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (add-hook 'js-mode-hook
           (lambda ()
-            (prettier-js-mode)
             (defvar js-indent-level nil)
             (setq js-indent-level 2)
             (local-set-key (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
@@ -859,7 +922,6 @@ In case the execution fails, return an error."
   (tide-setup)
   (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
-  (company-mode +1)
   (tide-hl-identifier-mode +1))
 
 (use-package tide
@@ -924,10 +986,10 @@ In case the execution fails, return an error."
 ;; css mode hook keybindings
 ;;----------------------------------------------------------------------------
 (add-hook 'css-mode-hook
-          (lambda ()
-            (defvar css-indent-offset nil)
-            (setq css-indent-offset 2)
-            (local-set-key (kbd "C-c b") 'web-beautify-css)))
+    (lambda ()
+      (defvar css-indent-offset nil)
+      (setq css-indent-offset 2)
+      (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;;----------------------------------------------------------------------------
 ;; use diff-hl mode, shows git diff in the gutter
@@ -955,7 +1017,7 @@ In case the execution fails, return an error."
     "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
   :bind (("C-c l" . magit-log-buffer-file)
-         ("C-x g" . magit-status)))
+   ("C-x g" . magit-status)))
 
 ;;----------------------------------------------------------------------------
 ;; Ivy
@@ -981,7 +1043,23 @@ In case the execution fails, return an error."
   (setq ivy-format-function #'ivy-format-function-arrow)
   (setq ivy-wrap t)
   (setq ivy-truncate-lines nil)
-  (setq ivy-action-wrap t))
+  (setq ivy-action-wrap t)
+  (ivy-set-actions
+   'ivy-switch-buffer
+   '(("k"
+      (lambda\ (x)
+        (sk-ivy-kill-buffer-remove-from-recentf-list x)
+        (ivy--reset-state ivy-last))
+      "kill"))))
+
+(defun sk-ivy-kill-buffer-remove-from-recentf-list (buf)
+"Closes BUF from ivy-virtual-buffers and remove BUF from recentf list."
+  (interactive)
+  (if (get-buffer buf)
+      (kill-buffer buf)
+    (setq recentf-list (delete (cdr (assoc buf ivy--virtual-buffers)) recentf-list))))
+
+
 
 ;;----------------------------------------------------------------------------
 ;; Counsel
@@ -989,13 +1067,13 @@ In case the execution fails, return an error."
 (use-package counsel
   :diminish counsel-mode
   :bind (
-         ("C-c f" . counsel-git)
-         ("C-c s" . counsel-rg)
-         ("C-s" . counsel-grep-or-swiper)
-         ("C-x r b" . counsel-bookmark)
-         ("M-y" . counsel-yank-pop)
-         :map ivy-minibuffer-map
-         ("M-y" . ivy-next-line))
+   ("C-c f" . counsel-git)
+   ("C-c s" . counsel-rg)
+   ("C-s" . counsel-grep-or-swiper)
+   ("C-x r b" . counsel-bookmark)
+   ("M-y" . counsel-yank-pop)
+   :map ivy-minibuffer-map
+   ("M-y" . ivy-next-line))
   :commands counsel-mode
   :init
   (add-hook 'after-init-hook #'counsel-mode)
@@ -1046,65 +1124,6 @@ In case the execution fails, return an error."
     ("q" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
-;; make searches case sensitive
-;; make dabbrev completion case sensitive
-;;----------------------------------------------------------------------------
-(defvar dabbrev-case-fold-search nil)
-
-;;----------------------------------------------------------------------------
-;; Company mode
-;;----------------------------------------------------------------------------
-(use-package company
-  :ensure t
-  :diminish company-mode
-  :commands global-company-mode
-  :init
-  (add-hook 'after-init-hook #'global-company-mode)
-  :config
-  (setq company-frontends
-        '(company-pseudo-tooltip-unless-just-one-frontend
-          company-preview-if-just-one-frontend))
-  (setq company-backends '(company-css
-                           company-capf
-                           company-files
-                           (company-dabbrev-code company-keywords)
-                           company-dabbrev))
-  (setq company-tooltip-align-annotations t)
-  (setq company-tooltip-flip-when-above t)
-  (setq company-idle-delay 0.4)
-  (setq company-minimum-prefix-length 3)
-  (setq company-selection-wrap-around t)
-  (setq company-show-numbers t)
-  (setq company-dabbrev-downcase nil)
-  (setq company-dabbrev-other-buffers nil)
-  (setq company-dabbrev-ignore-case t)
-  (setq company-dabbrev-code-everywhere t)
-
-  (let ((map company-active-map))
-    (mapc (lambda (x) (define-key map (format "%d" x) 'ora-company-number))
-          (number-sequence 0 9))
-    (define-key map " " (lambda ()
-                          (interactive)
-                          (company-abort)
-                          (self-insert-command 1)))
-    (define-key map (kbd "<return>") nil)))
-
-(defun ora-company-number ()
-  "Forward to `company-complete-number'.
-Unless the number is potentially part of the candidate.
-In that case, insert the number."
-  (interactive)
-  (let* ((k (this-command-keys))
-         (re (concat "^" company-prefix k)))
-    (if (cl-find-if (lambda (s) (string-match re s))
-                    company-candidates)
-        (self-insert-command 1)
-      (company-complete-number
-       (if (equal k "0")
-           10
-         (string-to-number k))))))
-
-;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
@@ -1146,14 +1165,6 @@ In that case, insert the number."
   (unbind-key "C-c <right>" winner-mode-map))
 
 ;;----------------------------------------------------------------------------
-;; rearrange window/buffer size
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "s-<up>") 'enlarge-window)
-(global-set-key (kbd "s-<down>") 'shrink-window)
-(global-set-key (kbd "s-<right>") 'enlarge-window-horizontally)
-(global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
-
-;;----------------------------------------------------------------------------
 ;; shift lines up and down with M-up and M-down. When paredit is enabled,
 ;; it will use those keybindings. For this reason, you might prefer to
 ;; use M-S-up and M-S-down, which will work even in lisp modes.
@@ -1163,28 +1174,6 @@ In that case, insert the number."
          ("C-." . md/move-lines-down)
          ("C-c d d" . md/duplicate-down)
          ("C-c d u" . md/duplicate-up)))
-
-;;----------------------------------------------------------------------------
-;; delete matching pairs
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c d p") 'delete-pair)
-
-;;----------------------------------------------------------------------------
-;; delete selection when pasting text
-;;----------------------------------------------------------------------------
-(delete-selection-mode 1)
-
-;;----------------------------------------------------------------------------
-;; add clipboard kills from other programs to emacs kill ring
-;;----------------------------------------------------------------------------
-(setq save-interprogram-paste-before-kill t)
-
-;;----------------------------------------------------------------------------
-;; indent after pasting text into emacs
-;;----------------------------------------------------------------------------
-(defadvice yank (after indent-region activate)
-  "Indent text after pasting."
-  (indent-region (region-beginning) (region-end) nil))
 
 ;;----------------------------------------------------------------------------
 ;; cut/copy the current line if no region is active
@@ -1228,54 +1217,6 @@ In that case, insert the number."
   :config (default-text-scale-mode))
 
 ;;----------------------------------------------------------------------------
-;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
-;;----------------------------------------------------------------------------
-(defun sk/split-window()
-  "Split the window to see the most recent buffer in the other window.
-Call a second time to restore the original window configuration."
-  (interactive)
-  (if (eq last-command 'sk/split-window)
-      (progn
-        (jump-to-register :sk/split-window)
-        (setq this-command 'sk/unsplit-window))
-    (window-configuration-to-register :sk/split-window)
-    (switch-to-buffer-other-window nil)))
-
-(global-set-key (kbd "C-|") 'sk/split-window)
-
-;;----------------------------------------------------------------------------
-;; new line and indent
-;;----------------------------------------------------------------------------
-(defun newline-at-end-of-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (move-end-of-line 1)
-  (newline-and-indent))
-
-(global-set-key (kbd "S-<return>") 'newline-at-end-of-line)
-
-(defun newline-before-the-current-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (unless (bolp)
-    (beginning-of-line))
-  (newline)
-  (forward-line -1)
-  (indent-according-to-mode))
-
-(global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
-
-;;----------------------------------------------------------------------------
-;; reload update buffer if changed on disk automatically
-;; reload file is updated outside emacs
-;;----------------------------------------------------------------------------
-(global-auto-revert-mode 1)
-(setq auto-revert-verbose nil)
-(setq global-auto-revert-non-file-buffers t
-      auto-revert-verbose nil)
-(global-set-key (kbd "<f5>") 'revert-buffer)
-
-;;----------------------------------------------------------------------------
 ;; page break lines
 ;;----------------------------------------------------------------------------
 (use-package page-break-lines
@@ -1284,41 +1225,10 @@ Call a second time to restore the original window configuration."
   (global-page-break-lines-mode))
 
 ;;----------------------------------------------------------------------------
-;; kill back to indentation
-;;----------------------------------------------------------------------------
-(defun kill-back-to-indentation ()
-  "Kill from point back to the first non-whitespace character on the line."
-  (interactive)
-  (let ((prev-pos (point)))
-    (back-to-indentation)
-    (kill-region (point) prev-pos)))
-
-(global-set-key (kbd "C-S-k") 'kill-back-to-indentation)
-
-;;----------------------------------------------------------------------------
-;; kill entire line to indentation
-;;----------------------------------------------------------------------------
-(defun smart-kill-whole-line (&optional arg)
-  "A wrapper around that respects indentation and arguments ARG."
-  (interactive "P")
-  (kill-whole-line arg)
-  (back-to-indentation))
-
-(global-set-key [remap kill-whole-line] 'smart-kill-whole-line)
-
-;;----------------------------------------------------------------------------
-;; removes default key binding for M-left and M-right
-;; train myself to use M-f and M-b instead
-;;----------------------------------------------------------------------------
-(global-unset-key [M-left])
-(global-unset-key [M-right])
-
-;;----------------------------------------------------------------------------
 ;; use evil nerd commenter for comments
 ;;----------------------------------------------------------------------------
 (use-package evil-nerd-commenter
-  :config
-  (global-set-key (kbd "M-;") 'evilnc-comment-or-uncomment-lines))
+  :bind (("M-;" . evilnc-comment-or-uncomment-lines)))
 
 ;;----------------------------------------------------------------------------
 ;; show matching parens
