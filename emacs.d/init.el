@@ -189,6 +189,16 @@
 (setq set-mark-command-repeat-pop t)
 
 ;;----------------------------------------------------------------------------
+;; Enable recursive minibuffers
+;;----------------------------------------------------------------------------
+(setq enable-recursive-minibuffers t)
+
+;;----------------------------------------------------------------------------
+;; Indicate minibuffer recursion depth
+;;----------------------------------------------------------------------------
+(minibuffer-depth-indicate-mode)
+
+;;----------------------------------------------------------------------------
 ;; don't open a new frame when emacs is already open
 ;;----------------------------------------------------------------------------
 (setq ns-pop-up-frames nil)
@@ -245,6 +255,11 @@
 (electric-pair-mode)
 
 ;;----------------------------------------------------------------------------
+;; enable global case sensitive search
+;; ----------------------------------------------------------------------------
+(set-default 'case-fold-search nil)
+
+;;----------------------------------------------------------------------------
 ;; enable global electric-indent-mode
 ;; ----------------------------------------------------------------------------
 (setq-default electric-indent-inhibit t)
@@ -263,14 +278,6 @@
 ;; delete matching pairs
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
-
-;;----------------------------------------------------------------------------
-;; rearrange window/buffer size
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "s-<up>") 'enlarge-window)
-(global-set-key (kbd "s-<down>") 'shrink-window)
-(global-set-key (kbd "s-<right>") 'enlarge-window-horizontally)
-(global-set-key (kbd "s-<left>") 'shrink-window-horizontally)
 
 ;;----------------------------------------------------------------------------
 ;; set M-` to toggle all open EMACS windows
@@ -336,16 +343,16 @@
 SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
   (interactive)
   (let ((pos (point))
-  (col (current-column))
-  (up-or-down (if scroll-up 1 -1)))
+        (col (current-column))
+        (up-or-down (if scroll-up 1 -1)))
     (scroll-up up-or-down)
     (if (pos-visible-in-window-p pos)
-  (goto-char pos)
+        (goto-char pos)
       (if (or (eq last-command 'next-line)
-        (eq last-command 'previous-line))
-    (move-to-column temporary-goal-column)
-  (move-to-column col)
-  (setq temporary-goal-column col))
+              (eq last-command 'previous-line))
+          (move-to-column temporary-goal-column)
+        (move-to-column col)
+        (setq temporary-goal-column col))
       (setq this-command 'next-line))))
 
 (defun scroll-up-in-place ()
@@ -390,18 +397,18 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
   "Renames current buffer and file it is visiting."
   (interactive)
   (let ((name (buffer-name))
-  (filename (buffer-file-name)))
+        (filename (buffer-file-name)))
     (if (not (and filename (file-exists-p filename)))
-  (error "Buffer '%s' is not visiting a file!" name)
+        (error "Buffer '%s' is not visiting a file!" name)
       (let ((new-name (read-file-name "New name: " filename)))
-  (cond ((get-buffer new-name)
-         (error "A buffer named '%s' already exists!" new-name))
-        (t
-         (rename-file filename new-name 1)
-         (rename-buffer new-name)
-         (set-visited-file-name new-name)
-         (set-buffer-modified-p nil)
-         (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
+        (cond ((get-buffer new-name)
+               (error "A buffer named '%s' already exists!" new-name))
+              (t
+               (rename-file filename new-name 1)
+               (rename-buffer new-name)
+               (set-visited-file-name new-name)
+               (set-buffer-modified-p nil)
+               (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
 (global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
@@ -431,11 +438,11 @@ If `universal-argument' is called first, kill special buffers too"
   (progn
     (dolist (buffer (buffer-list))
       (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-  (kill-buffer buffer))))
+        (kill-buffer buffer))))
   (mapc (lambda (buffer)
-    (when (eq 'dired-mode (buffer-local-value 'major-mode buffer))
-      (kill-buffer buffer)))
-  (buffer-list))
+          (when (eq 'dired-mode (buffer-local-value 'major-mode buffer))
+            (kill-buffer buffer)))
+        (buffer-list))
   (message "Closed all other buffers"))
 
 (global-set-key (kbd "C-c k") 'kill-other-buffers)
@@ -450,19 +457,19 @@ Result is full path.
 If `universal-argument' is called first, copy only the dir path"
   (interactive "P")
   (let ((-fpath
-   (if (equal major-mode 'dired-mode)
-       (expand-file-name default-directory)
-     (if (buffer-file-name)
-         (buffer-file-name)
-       (user-error "Current buffer is not associated with a file")))))
+         (if (equal major-mode 'dired-mode)
+             (expand-file-name default-directory)
+           (if (buffer-file-name)
+               (buffer-file-name)
+             (user-error "Current buffer is not associated with a file")))))
     (kill-new
      (if *dir-path-only-p
-   (progn
-     (message "Directory path copied: %s" (file-name-directory -fpath))
-     (file-name-directory -fpath))
+         (progn
+           (message "Directory path copied: %s" (file-name-directory -fpath))
+           (file-name-directory -fpath))
        (progn
-   (message "File path copied: %s" -fpath)
-   -fpath )))))
+         (message "File path copied: %s" -fpath)
+         -fpath )))))
 
 (global-set-key (kbd "C-c c f") 'surya-copy-file-path)
 
@@ -481,8 +488,8 @@ If not in a Git repo, uses the current directory."
   (interactive)
   (if (git-root-dir)
       (progn
-  (kill-new (git-root-dir))
-  (message "GIT root path copied:%s" (git-root-dir)))
+        (kill-new (git-root-dir))
+        (message "GIT root path copied:%s" (git-root-dir)))
     (progn
       (kill-new default-directory)
       (message "File not in GIT repo, copied default path:%s" default-directory))))
@@ -502,13 +509,13 @@ Version 2015-12-08"
   (interactive)
   (let ($p1 $p2)
     (if (region-active-p)
-  (progn (setq $p1 (region-beginning))
-         (setq $p2 (region-end)))
+        (progn (setq $p1 (region-beginning))
+               (setq $p2 (region-end)))
       (progn (setq $p1 (line-beginning-position))
-       (setq $p2 (line-end-position))))
+             (setq $p2 (line-end-position))))
     (append-to-register ?1 $p1 $p2)
     (with-temp-buffer (insert "\n")
-          (append-to-register ?1 (point-min) (point-max)))
+                      (append-to-register ?1 (point-min) (point-max)))
     (message "Appended to register 1: 「%s」." (buffer-substring-no-properties $p1 $p2))))
 
 (defun xah-clear-register-1 ()
@@ -533,9 +540,9 @@ Version 2015-12-08"
   (interactive "p")
   (let ((ppss (syntax-ppss)))
     (cond ((elt ppss 3)
-     (goto-char (elt ppss 8))
-     (backward-up-sexp (1- arg)))
-    ((backward-up-list arg)))))
+           (goto-char (elt ppss 8))
+           (backward-up-sexp (1- arg)))
+          ((backward-up-list arg)))))
 
 (global-set-key [remap backward-up-list] 'backward-up-sexp) ; C-M-u, C-M-up
 
@@ -547,16 +554,16 @@ Version 2015-12-08"
   (interactive "P")
   (if *git-root-path
       (if (git-root-dir)
+          (progn
+            (shell-command
+             (format "open -a Terminal %s"
+                     (git-root-dir))))
+        (progn
+          (message (concat "'" (file-name-nondirectory buffer-file-name) "' is not in git repository"))))
     (progn
       (shell-command
        (format "open -a Terminal %s"
-         (git-root-dir))))
-  (progn
-    (message (concat "'" (file-name-nondirectory buffer-file-name) "' is not in git repository"))))
-    (progn
-      (shell-command
-       (format "open -a Terminal %s"
-         (expand-file-name default-directory))))))
+               (expand-file-name default-directory))))))
 
 (bind-key "C-c o t" 'surya/open-Terminal-here)
 
@@ -595,8 +602,8 @@ In case the execution fails, return an error."
   "Display current file/directory in a Finder window.  PATH BEHIND can be passed."
   (interactive)
   (let ((item (or path
-      buffer-file-name
-      (and (eq major-mode 'dired-mode) default-directory))))
+                  buffer-file-name
+                  (and (eq major-mode 'dired-mode) default-directory))))
     (cond
      ((not (stringp item)))
      ((file-remote-p item)
@@ -608,7 +615,7 @@ In case the execution fails, return an error."
        item
        "\" as POSIX file)\n"
        (unless behind
-   "tell application \"Finder\" to activate"))))))
+         "tell application \"Finder\" to activate"))))))
 
 (global-set-key (kbd "C-c o f") 'show-in-finder)
 
@@ -646,42 +653,52 @@ In case the execution fails, return an error."
 (add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
 
 ;;----------------------------------------------------------------------------
-;; borrowed from http://postmomentum.ch/blog/201304/blog-on-emacs
-;;----------------------------------------------------------------------------
-(defun sk/split-window()
-  "Split the window to see the most recent buffer in the other window.
-Call a second time to restore the original window configuration."
-  (interactive)
-  (if (eq last-command 'sk/split-window)
-      (progn
-        (jump-to-register :sk/split-window)
-        (setq this-command 'sk/unsplit-window))
-    (window-configuration-to-register :sk/split-window)
-    (switch-to-buffer-other-window nil)))
-
-(global-set-key (kbd "C-|") 'sk/split-window)
-
-;;----------------------------------------------------------------------------
 ;; new line and indent
 ;;----------------------------------------------------------------------------
-(defun newline-at-end-of-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (move-end-of-line 1)
-  (newline-and-indent))
-
-(global-set-key (kbd "S-<return>") 'newline-at-end-of-line)
-
-(defun newline-before-the-current-line ()
-  "Move to end of line, enter a newline, and reindent."
-  (interactive)
-  (unless (bolp)
-    (beginning-of-line))
-  (newline)
-  (forward-line -1)
-  (indent-according-to-mode))
+(defun newline-before-the-current-line (&optional *newline-above)
+  "Move to end of line, enter a newline, and reindent.
+*NEWLINE-ABOVE is optional `universal-argument' to insert new line above"
+  (interactive "P")
+  (if *newline-above
+      (progn
+        (unless (bolp)
+          (beginning-of-line))
+        (let ((col (save-excursion
+                     (back-to-indentation)
+                     (current-column))))
+          (newline)
+          (forward-line -1)
+          (indent-to-column col)))
+    (progn
+      (move-end-of-line 1)
+      (let ((col (save-excursion
+                   (back-to-indentation)
+                   (current-column))))
+        (newline)
+        (indent-to-column col)))))
 
 (global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
+
+;;----------------------------------------------------------------------------
+;; M-] to indent and M-[ to unindent
+;; numerical argument will indent (arg) * (tab-width) spaces
+;;----------------------------------------------------------------------------
+(defun keyboard-indent (&optional arg)
+  "Unindent line with optional numerical ARG."
+  (interactive "P")
+  (let ((deactivate-mark nil)
+        (beg (or (and mark-active (region-beginning))
+                 (line-beginning-position)))
+        (end (or (and mark-active (region-end)) (line-end-position))))
+    (indent-rigidly beg end (* (or arg 1) tab-width))))
+
+(defun keyboard-unindent (&optional arg)
+  "Indent line with optional numerical ARG."
+  (interactive "P")
+  (keyboard-indent (* -1 (or arg 1))))
+
+(global-set-key (kbd "M-]") 'keyboard-indent)
+(global-set-key (kbd "M-[") 'keyboard-unindent)
 
 ;;----------------------------------------------------------------------------
 ;; reload update buffer if changed on disk automatically
@@ -765,10 +782,10 @@ Call a second time to restore the original window configuration."
   :config
   (setq recentf-save-file (locate-user-emacs-file "cache/recent-files"))
   (setq recentf-exclude '("/\\.git/.*\\'"
-        "/elpa/.*\\'"
-        "/elfeed/.*\\'"
-        "/cache/.*\\'"
-        ".*\\.gz\\'"))
+                          "/elpa/.*\\'"
+                          "/elfeed/.*\\'"
+                          "/cache/.*\\'"
+                          ".*\\.gz\\'"))
   (setq recentf-max-saved-items 100)
   (setq recentf-max-menu-items 20)
   (setq recentf-auto-cleanup 600)
@@ -804,9 +821,9 @@ Call a second time to restore the original window configuration."
   :diminish hs-minor-mode
   :init
   (dolist (hook '(c-mode-common-hook
-      prog-mode-hook
-      emacs-lisp-mode-hook
-      python-mode-hook))
+                  prog-mode-hook
+                  emacs-lisp-mode-hook
+                  python-mode-hook))
     (add-hook hook #'hs-minor-mode))
   :config
   ;; Unfold when search is active
@@ -834,8 +851,8 @@ Call a second time to restore the original window configuration."
 (use-package highlight-symbol
   :diminish highlight-symbol-mode
   :bind (
-   ("M-n" . highlight-symbol-next)
-   ("M-p" . highlight-symbol-prev))
+         ("M-n" . highlight-symbol-next)
+         ("M-p" . highlight-symbol-prev))
   :init
   (dolist (hook '(prog-mode-hook html-mode-hook css-mode-hook))
     (add-hook hook 'highlight-symbol-mode)
@@ -859,7 +876,7 @@ Call a second time to restore the original window configuration."
   (add-hook 'sgml-mode-hook #'yas-minor-mode)
   (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
-            (yas-minor-mode -1)))
+                              (yas-minor-mode -1)))
   :config
   (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
   (yas-reload-all))
@@ -869,6 +886,8 @@ Call a second time to restore the original window configuration."
 ;; feature-mode needs a hook to diminish orgtbl-mode
 ;;----------------------------------------------------------------------------
 (use-package feature-mode
+  :bind (:map feature-mode-map
+              ("RET" . newline-and-indent))
   :init
   (add-hook 'feature-mode-hook
             (lambda ()
@@ -904,6 +923,7 @@ Call a second time to restore the original window configuration."
             (setq js-indent-level 2)
             (local-set-key (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
             (local-set-key (kbd "C-c b") 'web-beautify-js)
+            (local-set-key (kbd "M-j") 'c-indent-new-comment-line)
             (local-set-key (kbd "C-c p") 'prettier-js)))
 
 ;;----------------------------------------------------------------------------
@@ -948,17 +968,15 @@ Call a second time to restore the original window configuration."
 ;;----------------------------------------------------------------------------
 ;; use tagedit for working with html, adds quotes after equals and provides
 ;; various other helpful html tag editing methods
+;; enable tagedit in html mode
 ;;----------------------------------------------------------------------------
 (use-package tagedit
+  :init
+  (add-hook 'html-mode-hook #'tagedit-mode)
   :diminish tagedit-mode
   :commands tagedit-mode
   :config
   (tagedit-add-paredit-like-keybindings))
-
-;;----------------------------------------------------------------------------
-;; enable tagedit in html mode
-;;----------------------------------------------------------------------------
-(add-hook 'html-mode-hook (lambda () (tagedit-mode 1)))
 
 ;;----------------------------------------------------------------------------
 ;; html mode hook keybindings
@@ -1033,6 +1051,9 @@ Call a second time to restore the original window configuration."
   :init
   (add-hook 'after-init-hook #'ivy-mode)
   :config
+  ;; ignoring buffers starting with **
+  ;; just press C-c C-a to show buffers starting with *
+  (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
   ;; osx doesn't have -d flag for xargs
   (defvar counsel-find-file-occur-cmd "ls | grep -i -E '%s' | tr '\\n' '\\0' | xargs -0 ls"
     "Format string for `counsel-find-file-occur'.")
@@ -1043,23 +1064,7 @@ Call a second time to restore the original window configuration."
   (setq ivy-format-function #'ivy-format-function-arrow)
   (setq ivy-wrap t)
   (setq ivy-truncate-lines nil)
-  (setq ivy-action-wrap t)
-  (ivy-set-actions
-   'ivy-switch-buffer
-   '(("k"
-      (lambda\ (x)
-        (sk-ivy-kill-buffer-remove-from-recentf-list x)
-        (ivy--reset-state ivy-last))
-      "kill"))))
-
-(defun sk-ivy-kill-buffer-remove-from-recentf-list (buf)
-"Closes BUF from ivy-virtual-buffers and remove BUF from recentf list."
-  (interactive)
-  (if (get-buffer buf)
-      (kill-buffer buf)
-    (setq recentf-list (delete (cdr (assoc buf ivy--virtual-buffers)) recentf-list))))
-
-
+  (setq ivy-action-wrap t))
 
 ;;----------------------------------------------------------------------------
 ;; Counsel
