@@ -223,8 +223,17 @@
 ;;----------------------------------------------------------------------------
 ;; Indicate buffer boundaries and empty lines
 ;;----------------------------------------------------------------------------
-;; (setq-default indicate-buffer-boundaries 'left)
 (setq-default indicate-empty-lines t)
+
+;;----------------------------------------------------------------------------
+;; Require final new line for all buffers
+;;----------------------------------------------------------------------------
+(setq require-final-newline t)
+
+;;----------------------------------------------------------------------------
+;; Eval Buffer using C-c e in emacslisp mode
+;;----------------------------------------------------------------------------
+(define-key lisp-mode-shared-map (kbd "C-c e") 'eval-buffer)
 
 ;;----------------------------------------------------------------------------
 ;; Don't use dialogs for minibuffer input
