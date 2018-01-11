@@ -422,6 +422,23 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
+;; delete file and buffer
+;;----------------------------------------------------------------------------
+(defun delete-file-and-buffer ()
+  "Kill the current buffer and deletes the file it is visiting."
+  (interactive)
+  (let ((filename (buffer-file-name)))
+    (when filename
+      (if (vc-backend filename)
+          (vc-delete-file filename)
+        (progn
+          (delete-file filename)
+          (message "Deleted file %s" filename)
+          (kill-buffer))))))
+
+(global-set-key (kbd "C-c d f")  'delete-file-and-buffer)
+
+;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
 ;;----------------------------------------------------------------------------
 (setq initial-major-mode 'js-mode)
@@ -888,6 +905,7 @@ In case the execution fails, return an error."
                               (yas-minor-mode -1)))
   :config
   (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
+  (setq yas-indent-line 'fixed)
   (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
@@ -1013,10 +1031,10 @@ In case the execution fails, return an error."
 ;; css mode hook keybindings
 ;;----------------------------------------------------------------------------
 (add-hook 'css-mode-hook
-    (lambda ()
-      (defvar css-indent-offset nil)
-      (setq css-indent-offset 2)
-      (local-set-key (kbd "C-c b") 'web-beautify-css)))
+          (lambda ()
+            (defvar css-indent-offset nil)
+            (setq css-indent-offset 2)
+            (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;;----------------------------------------------------------------------------
 ;; use diff-hl mode, shows git diff in the gutter
@@ -1043,8 +1061,7 @@ In case the execution fails, return an error."
   (magit-define-popup-switch 'magit-push-popup ?u
     "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind (("C-c l" . magit-log-buffer-file)
-   ("C-x g" . magit-status)))
+  :bind (("C-x g" . magit-status)))
 
 ;;----------------------------------------------------------------------------
 ;; Ivy
@@ -1062,7 +1079,7 @@ In case the execution fails, return an error."
   :config
   ;; ignoring buffers starting with **
   ;; just press C-c C-a to show buffers starting with *
-  (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
+  ;; (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
   ;; osx doesn't have -d flag for xargs
   (defvar counsel-find-file-occur-cmd "ls | grep -i -E '%s' | tr '\\n' '\\0' | xargs -0 ls"
     "Format string for `counsel-find-file-occur'.")
@@ -1081,13 +1098,13 @@ In case the execution fails, return an error."
 (use-package counsel
   :diminish counsel-mode
   :bind (
-   ("C-c f" . counsel-git)
-   ("C-c s" . counsel-rg)
-   ("C-s" . counsel-grep-or-swiper)
-   ("C-x r b" . counsel-bookmark)
-   ("M-y" . counsel-yank-pop)
-   :map ivy-minibuffer-map
-   ("M-y" . ivy-next-line))
+         ("C-c f" . counsel-git)
+         ("C-c s" . counsel-rg)
+         ("C-s" . counsel-grep-or-swiper)
+         ("C-x r b" . counsel-bookmark)
+         ("M-y" . counsel-yank-pop)
+         :map ivy-minibuffer-map
+         ("M-y" . ivy-next-line))
   :commands counsel-mode
   :init
   (add-hook 'after-init-hook #'counsel-mode)
@@ -1112,7 +1129,7 @@ In case the execution fails, return an error."
   (setq swiper-include-line-number-in-search t))
 
 ;;----------------------------------------------------------------------------
-;; ivy-hydra brings some extra goodness to ivy-buffer with C-o
+;; hydra brings some extra goodness to ivy-buffer with C-o
 ;;----------------------------------------------------------------------------
 (use-package hydra
   :config
@@ -1188,6 +1205,30 @@ In case the execution fails, return an error."
          ("C-." . md/move-lines-down)
          ("C-c d d" . md/duplicate-down)
          ("C-c d u" . md/duplicate-up)))
+
+;;----------------------------------------------------------------------------
+;; github gist
+;;----------------------------------------------------------------------------
+(use-package gist
+  :bind (("C-c g l" . gist-list)
+         ("C-c g r" . gist-region-or-buffer-private)
+         ("C-c g c" . gist-buffer))
+  :init
+  (setq gist-ask-for-description t
+        gist-ask-for-filename t
+        gist-list-format
+        '((created "Created" 15 nil
+                   "%D %R")
+          (visibility "Visibility" 10 nil
+                      (lambda (public)
+                        (or (and public "public")
+                            "private")))
+          (description "Description" 30 nil identity)
+          (files "Files" 0 nil
+                 (lambda (names)
+                   (mapconcat 'identity names ", ")))))
+  :config
+  (setq gist-view-gist t))
 
 ;;----------------------------------------------------------------------------
 ;; cut/copy the current line if no region is active
