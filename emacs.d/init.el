@@ -265,8 +265,14 @@
 
 ;;----------------------------------------------------------------------------
 ;; enable global case sensitive search
+;; works when searching rg but not so great for swiper within buffer
 ;; ----------------------------------------------------------------------------
-(set-default 'case-fold-search nil)
+;; (setq-default case-fold-search nil)
+
+;;----------------------------------------------------------------------------
+;; make dabbrev completion case sensitive
+;;----------------------------------------------------------------------------
+(defvar dabbrev-case-fold-search nil)
 
 ;;----------------------------------------------------------------------------
 ;; enable global electric-indent-mode
@@ -287,6 +293,11 @@
 ;; delete matching pairs
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
+
+;;----------------------------------------------------------------------------
+;; delete back to sexpression
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "M-C-<backspace>") 'backward-kill-sexp)
 
 ;;----------------------------------------------------------------------------
 ;; set M-` to toggle all open EMACS windows
@@ -312,12 +323,6 @@
 (defvar dired-dwim-target t)
 
 ;;----------------------------------------------------------------------------
-;; make searches case sensitive
-;; make dabbrev completion case sensitive
-;;----------------------------------------------------------------------------
-(defvar dabbrev-case-fold-search nil)
-
-;;----------------------------------------------------------------------------
 ;; simple visible bell which works in all terminal types
 ;;----------------------------------------------------------------------------
 (defun flash-mode-line ()
@@ -333,6 +338,11 @@
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "Operator Mono")
 (setq default-frame-alist '((font . "Operator Mono-13")))
+
+;;----------------------------------------------------------------------------
+;; increase line spacing
+;;----------------------------------------------------------------------------
+(setq-default line-spacing 0.2)
 
 ;;----------------------------------------------------------------------------
 ;; disable toolbars
@@ -772,19 +782,6 @@ In case the execution fails, return an error."
   :config
   (load-theme 'sanityinc-tomorrow-eighties t))
 
-;; (use-package eclipse-theme
-;;   :config
-;;   (load-theme 'eclipse t))
-
-;; (when (image-type-available-p 'xpm)
-;;   (use-package powerline
-;;     :config
-;;     (setq powerline-display-buffer-size nil)
-;;     (setq powerline-display-mule-info nil)
-;;     (setq powerline-display-hud nil)
-;;     (when (display-graphic-p)
-;;       (powerline-default-theme)
-;;       (remove-hook 'focus-out-hook 'powerline-unset-selected-window))))
 
 ;;----------------------------------------------------------------------------
 ;; Use Ibuffer for Buffer List
@@ -904,7 +901,7 @@ In case the execution fails, return an error."
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
   :config
-  (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
+  ;; (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
   (setq yas-indent-line 'fixed)
   (yas-reload-all))
 
@@ -938,7 +935,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -1110,6 +1107,7 @@ In case the execution fails, return an error."
   (add-hook 'after-init-hook #'counsel-mode)
   :config
   (setq counsel-find-file-at-point t)
+  (setq counsel-preselect-current-file t)
   (setq counsel-grep-base-command
         "rg -i -M 120 --no-heading --line-number --color never %s %s"))
 
@@ -1155,10 +1153,76 @@ In case the execution fails, return an error."
     ("q" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
+;; Company mode
+;;----------------------------------------------------------------------------
+(use-package company
+  :bind ("C-c t" . company-manual-begin)
+  :ensure t
+  :diminish company-mode
+  :commands global-company-mode
+  :init
+  (add-hook 'after-init-hook #'global-company-mode)
+  :config
+  (setq company-frontends
+        '(company-pseudo-tooltip-unless-just-one-frontend
+          company-preview-if-just-one-frontend))
+  (setq company-backends '(company-css
+                           company-tide
+                           company-capf
+                           company-files
+                           (company-dabbrev-code company-keywords)
+                           company-dabbrev))
+  (setq company-tooltip-align-annotations t)
+  (setq company-tooltip-flip-when-above t)
+  (setq company-idle-delay 0.4)
+  (setq company-minimum-prefix-length 3)
+  (setq company-selection-wrap-around t)
+  (setq company-show-numbers t)
+  (defvar company-dabbrev-downcase nil)
+  ;; (setq company-dabbrev-downcase nil)
+  (defvar company-dabbrev-other-buffers nil)
+  ;; (setq company-dabbrev-other-buffers nil)
+  (defvar company-dabbrev-ignore-case nil)
+  (setq company-dabbrev-ignore-case t)
+  (defvar company-dabbrev-code-everywhere nil)
+  (setq company-dabbrev-code-everywhere t)
+
+  (let ((map company-active-map))
+    (mapc (lambda (x) (define-key map (format "%d" x) 'ora-company-number))
+          (number-sequence 0 9))
+    (define-key map " " (lambda ()
+                          (interactive)
+                          (company-abort)
+                          (self-insert-command 1)))
+    (define-key map (kbd "<return>") nil)))
+
+(defun ora-company-number ()
+  "Forward to `company-complete-number'.
+Unless the number is potentially part of the candidate.
+In that case, insert the number."
+  (interactive)
+  (let* ((k (this-command-keys))
+         (re (concat "^" company-prefix k)))
+    (if (cl-find-if (lambda (s) (string-match re s))
+                    company-candidates)
+        (self-insert-command 1)
+      (company-complete-number
+       (if (equal k "0")
+           10
+         (string-to-number k))))))
+
+;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
-  :bind ("C-c r" . rg))
+  :bind ("C-c r" . rg)
+  :config
+  (setq rg-group-result t))
+
+;; (use-package rg
+;;   :ensure t
+;;   :custom
+;;   (rg-group-result t "Group the results by filename"))
 
 ;;----------------------------------------------------------------------------
 ;; Move buffers between frames
@@ -1258,13 +1322,6 @@ In case the execution fails, return an error."
 (suspend-mode-during-cua-rect-selection 'whole-line-or-region-mode)
 
 ;;----------------------------------------------------------------------------
-;; Zop-to-char
-;;----------------------------------------------------------------------------
-(use-package zop-to-char
-  :bind (([remap zap-to-char] . zop-to-char)
-         ("M-Z" . zop-up-to-char)))
-
-;;----------------------------------------------------------------------------
 ;; Increase, Decrease font size across all buffers
 ;; "C-M-=" default-text-scale-increase, "C-M--" default-text-scale-decrease
 ;;----------------------------------------------------------------------------
@@ -1286,15 +1343,19 @@ In case the execution fails, return an error."
   :bind (("M-;" . evilnc-comment-or-uncomment-lines)))
 
 ;;----------------------------------------------------------------------------
-;; show matching parens
-;; highlight matching parentheses
+;; Rainbow Delimiters
+;; show matching parens in rainbow colors using rainbow mode
 ;;----------------------------------------------------------------------------
-(use-package paren
-  :config
-  (setq show-paren-delay 0)
-  (setq show-paren-when-point-inside-paren t)
-  (setq show-paren-when-point-in-periphery t)
-  (show-paren-mode))
+;; (use-package rainbow-delimiters
+;;   (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+
+(use-package rainbow-delimiters
+  :init
+  (dolist (hook '(emacs-lisp-mode-hook
+                  js-mode-hook
+                  css-mode-hook
+                  tide-mode-hook))
+    (add-hook hook #'rainbow-delimiters-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
