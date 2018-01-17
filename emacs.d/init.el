@@ -778,10 +778,16 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
-(use-package color-theme-sanityinc-tomorrow
-  :config
-  (load-theme 'sanityinc-tomorrow-eighties t))
+;; (use-package color-theme-sanityinc-tomorrow
+;;   :config
+;;   (load-theme 'sanityinc-tomorrow-eighties t))
 
+(use-package spacemacs-theme
+  :defer t
+  :init (load-theme 'spacemacs-dark t)
+  :custom
+  (spacemacs-theme-comment-bg nil)
+  (spacemacs-theme-comment-italic t))
 
 ;;----------------------------------------------------------------------------
 ;; Use Ibuffer for Buffer List
