@@ -786,6 +786,8 @@ In case the execution fails, return an error."
   :defer t
   :init (load-theme 'spacemacs-dark t)
   :custom
+  ;; yellow color cursor
+  (spacemacs-theme-custom-colors '((cursor . "#ecac2c")))
   (spacemacs-theme-comment-bg nil)
   (spacemacs-theme-comment-italic t))
 
@@ -971,8 +973,8 @@ In case the execution fails, return an error."
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
   (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
-  (setq flycheck-check-syntax-automatically '(save mode-enabled))
-  (tide-hl-identifier-mode +1))
+  ;; (tide-hl-identifier-mode +1)
+  (setq flycheck-check-syntax-automatically '(save mode-enabled)))
 
 (use-package tide
   :diminish tide-mode
@@ -1225,29 +1227,14 @@ In that case, insert the number."
   :config
   (setq rg-group-result t))
 
-;; (use-package rg
-;;   :ensure t
-;;   :custom
-;;   (rg-group-result t "Group the results by filename"))
+;;----------------------------------------------------------------------------
+;; ace-window to easily navigate between frames
+;;----------------------------------------------------------------------------
+(use-package ace-window
+  :bind ("C-x o" . ace-window)
+  :init
+  (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
-;;----------------------------------------------------------------------------
-;; Move buffers between frames
-;;----------------------------------------------------------------------------
-(use-package buffer-move
-  :bind(
-        ("<M-S-up>"    . buf-move-up)
-        ("<M-S-down>"  . buf-move-down)
-        ("<M-S-left>"  . buf-move-left)
-        ("<M-S-right>" . buf-move-right)))
-
-;;----------------------------------------------------------------------------
-;; Fast buffer switching
-;; shift <-- --> up down arrow keys to move point between buffers
-;;----------------------------------------------------------------------------
-(use-package windmove
-  :config
-  (setq windmove-wrap-around t)
-  (windmove-default-keybindings))
 
 ;;----------------------------------------------------------------------------
 ;; winner mode for saving windows layouts and toggle between them
