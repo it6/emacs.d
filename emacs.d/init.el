@@ -131,11 +131,6 @@
  truncate-partial-width-windows nil)
 
 ;;----------------------------------------------------------------------------
-;; treat all themes as safe
-;;----------------------------------------------------------------------------
-(setq custom-safe-themes t)
-
-;;----------------------------------------------------------------------------
 ;; move point all the way when scrolling to buffer boundaries
 ;;----------------------------------------------------------------------------
 (setq scroll-error-top-bottom t)
@@ -323,7 +318,7 @@
 (defvar dired-dwim-target t)
 
 ;;----------------------------------------------------------------------------
-;; simple visible bell which works in all terminal types
+;; use visible bell which works in all terminal types
 ;;----------------------------------------------------------------------------
 (defun flash-mode-line ()
   "Flash modeline on bad commands."
@@ -334,15 +329,15 @@
  ring-bell-function 'flash-mode-line)
 
 ;;----------------------------------------------------------------------------
-;; set regular font and unicode characters needs unicode font
-;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "Operator Mono")
-(setq default-frame-alist '((font . "Operator Mono-13")))
-
-;;----------------------------------------------------------------------------
 ;; increase line spacing
 ;;----------------------------------------------------------------------------
 (setq-default line-spacing 0.2)
+
+;;----------------------------------------------------------------------------
+;; set regular font and unicode character font
+;;----------------------------------------------------------------------------
+(set-fontset-font "fontset-default" 'unicode "operator mono")
+(setq default-frame-alist '((font . "operator mono 13")))
 
 ;;----------------------------------------------------------------------------
 ;; disable toolbars
@@ -776,20 +771,24 @@ In case the execution fails, return an error."
 (use-package wgrep)
 
 ;;----------------------------------------------------------------------------
+;; treat all themes as safe
+;;----------------------------------------------------------------------------
+(setq custom-safe-themes t)
+
+;;----------------------------------------------------------------------------
 ;; set default color theme
 ;;----------------------------------------------------------------------------
-;; (use-package color-theme-sanityinc-tomorrow
-;;   :config
-;;   (load-theme 'sanityinc-tomorrow-eighties t))
-
 (use-package spacemacs-theme
-  :defer t
-  :init (load-theme 'spacemacs-dark t)
+  :no-require t
+  :config (load-theme 'spacemacs-dark t)
   :custom
-  ;; yellow color cursor
+  ;; color cursor
   (spacemacs-theme-custom-colors '((cursor . "#ecac2c")))
   (spacemacs-theme-comment-bg nil)
   (spacemacs-theme-comment-italic t))
+
+;; randomly spacemacs doesn't load on startup, force spacemacs-dark theme to load after-init-hook
+;; (add-hook 'after-init-hook (lambda () (load-theme 'spacemacs-dark)(print "loaded spacemacs-dark theme")))
 
 ;;----------------------------------------------------------------------------
 ;; Use Ibuffer for Buffer List
@@ -890,6 +889,16 @@ In case the execution fails, return an error."
     (add-hook hook 'highlight-symbol-nav-mode))
   (add-hook 'org-mode-hook 'highlight-symbol-nav-mode))
 
+(use-package iedit
+  :commands iedit-mode
+  :bind ("M-I" . iedit-mode)
+  :config (progn
+            (setq iedit-log-level 0)
+            (define-key iedit-mode-keymap "\C-h" nil)
+            (define-key iedit-lib-keymap "\C-s" 'iedit-next-occurrence)
+            (define-key iedit-lib-keymap "\C-r" 'iedit-prev-occurrence))
+  :init (setq iedit-toggle-key-default nil))
+
 ;;----------------------------------------------------------------------------
 ;; markdown mode
 ;;----------------------------------------------------------------------------
@@ -943,7 +952,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -1029,7 +1038,7 @@ In case the execution fails, return an error."
 (use-package rainbow-mode
   :diminish rainbow-mode
   :config
-  (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook sass-mode-hook))
+  (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook emacs-lisp-mode-hook))
     (add-hook hook 'rainbow-mode)))
 
 ;;----------------------------------------------------------------------------
@@ -1165,7 +1174,6 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package company
   :bind ("C-c t" . company-manual-begin)
-  :ensure t
   :diminish company-mode
   :commands global-company-mode
   :init
@@ -1223,8 +1231,8 @@ In that case, insert the number."
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
 (use-package rg
-  :bind ("C-c r" . rg)
   :config
+  (rg-enable-default-bindings (kbd "C-c r"))
   (setq rg-group-result t))
 
 ;;----------------------------------------------------------------------------
@@ -1339,9 +1347,6 @@ In that case, insert the number."
 ;; Rainbow Delimiters
 ;; show matching parens in rainbow colors using rainbow mode
 ;;----------------------------------------------------------------------------
-;; (use-package rainbow-delimiters
-;;   (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
-
 (use-package rainbow-delimiters
   :init
   (dolist (hook '(emacs-lisp-mode-hook
