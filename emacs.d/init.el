@@ -312,10 +312,19 @@
 ;;----------------------------------------------------------------------------
 ;; Dired configuration
 ;;----------------------------------------------------------------------------
-(defvar dired-listing-switches "-ahlF")
-(defvar dired-recursive-deletes 'top)
-(defvar dired-recursive-copies 'always)
-(defvar dired-dwim-target t)
+(use-package dired
+  :ensure nil
+  :config
+  ;; Prefer g-prefixed coreutils version of standard utilities when available
+  (let ((gls (executable-find "gls")))
+       (when gls (setq insert-directory-program gls)))
+  ;; Default `ls' switches
+  (setq dired-listing-switches "-alhF")
+  ;; Do certain operations recursively
+  (setq dired-recursive-deletes 'top)
+  (setq dired-recursive-copies 'always)
+  ;; Imitate orthodox file managers with two buffers open
+  (setq dired-dwim-target t))
 
 ;;----------------------------------------------------------------------------
 ;; use visible bell which works in all terminal types
@@ -787,9 +796,6 @@ In case the execution fails, return an error."
   (spacemacs-theme-comment-bg nil)
   (spacemacs-theme-comment-italic t))
 
-;; randomly spacemacs doesn't load on startup, force spacemacs-dark theme to load after-init-hook
-;; (add-hook 'after-init-hook (lambda () (load-theme 'spacemacs-dark)(print "loaded spacemacs-dark theme")))
-
 ;;----------------------------------------------------------------------------
 ;; Use Ibuffer for Buffer List
 ;;----------------------------------------------------------------------------
@@ -889,6 +895,9 @@ In case the execution fails, return an error."
     (add-hook hook 'highlight-symbol-nav-mode))
   (add-hook 'org-mode-hook 'highlight-symbol-nav-mode))
 
+;;----------------------------------------------------------------------------
+;; iedit to edit sexpressions
+;;----------------------------------------------------------------------------
 (use-package iedit
   :commands iedit-mode
   :bind ("M-I" . iedit-mode)
@@ -952,7 +961,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -963,9 +972,8 @@ In case the execution fails, return an error."
             (defvar js-indent-level nil)
             (setq js-indent-level 2)
             (local-set-key (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
-            (local-set-key (kbd "C-c b") 'web-beautify-js)
-            (local-set-key (kbd "M-j") 'c-indent-new-comment-line)
-            (local-set-key (kbd "C-c p") 'prettier-js)))
+            (local-set-key (kbd "C-c p") 'prettier-js)
+            (local-set-key (kbd "M-j") 'c-indent-new-comment-line)))
 
 ;;----------------------------------------------------------------------------
 ;; set typescript mode
@@ -1003,8 +1011,9 @@ In case the execution fails, return an error."
 (use-package json-mode
   :init
   (add-to-list 'auto-mode-alist `(,(rx ".json" string-end) . json-mode))
-  :bind
-  (("C-c b" . json-mode-beautify)))
+  :config
+  (define-key json-mode-map (kbd "C-c b") 'json-mode-beautify)
+  (define-key json-mode-map (kbd "C-c p") 'prettier-js))
 
 ;;----------------------------------------------------------------------------
 ;; use tagedit for working with html, adds quotes after equals and provides
@@ -1026,11 +1035,19 @@ In case the execution fails, return an error."
           (lambda ()
             (local-set-key (kbd "C-c b") 'web-beautify-html)))
 
+;;----------------------------------------------------------------------------
+;; css mode hook keybindings
+;;----------------------------------------------------------------------------
+(add-hook 'css-mode-hook
+          (lambda ()
+            (defvar css-indent-offset nil)
+            (setq css-indent-offset 2)
+            (local-set-key (kbd "C-c p") 'prettier-js)))
+
 ;; ----------------------------------------------------------------------------
 ;; less mode, and web beautify css
 ;; ----------------------------------------------------------------------------
-(use-package less-css-mode
-  :bind ("C-c b" . web-beautify-css))
+(use-package less-css-mode)
 
 ;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
@@ -1040,15 +1057,6 @@ In case the execution fails, return an error."
   :config
   (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook emacs-lisp-mode-hook))
     (add-hook hook 'rainbow-mode)))
-
-;;----------------------------------------------------------------------------
-;; css mode hook keybindings
-;;----------------------------------------------------------------------------
-(add-hook 'css-mode-hook
-          (lambda ()
-            (defvar css-indent-offset nil)
-            (setq css-indent-offset 2)
-            (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;;----------------------------------------------------------------------------
 ;; use diff-hl mode, shows git diff in the gutter
@@ -1075,7 +1083,7 @@ In case the execution fails, return an error."
   (magit-define-popup-switch 'magit-push-popup ?u
     "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind (("C-x g" . magit-status)))
+  :bind ("C-x g" . magit-status))
 
 ;;----------------------------------------------------------------------------
 ;; Ivy
@@ -1091,15 +1099,12 @@ In case the execution fails, return an error."
   :init
   (add-hook 'after-init-hook #'ivy-mode)
   :config
-  ;; ignoring buffers starting with **
-  ;; just press C-c C-a to show buffers starting with *
-  ;; (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
-  ;; osx doesn't have -d flag for xargs
-  (defvar counsel-find-file-occur-cmd "ls | grep -i -E '%s' | tr '\\n' '\\0' | xargs -0 ls"
-    "Format string for `counsel-find-file-occur'.")
   (setq ivy-use-selectable-prompt t)
   (setq ivy-initial-inputs-alist nil)
   (setq ivy-use-virtual-buffers t)
+  ;; press C-c C-a to show all hidden buffers
+  ;; ignoring buffers starting with *
+  (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
   (setq ivy-count-format "(%d/%d) ")
   (setq ivy-format-function #'ivy-format-function-arrow)
   (setq ivy-wrap t)
@@ -1123,7 +1128,8 @@ In case the execution fails, return an error."
   :init
   (add-hook 'after-init-hook #'counsel-mode)
   :config
-  (setq counsel-find-file-at-point t)
+  ;; ignore dot files from counsel find file to see them press dot
+  (setq counsel-find-file-ignore-regexp "\\`\\.")
   (setq counsel-preselect-current-file t)
   (setq counsel-grep-base-command
         "rg -i -M 120 --no-heading --line-number --color never %s %s"))
@@ -1242,7 +1248,6 @@ In that case, insert the number."
   :bind ("C-x o" . ace-window)
   :init
   (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
-
 
 ;;----------------------------------------------------------------------------
 ;; winner mode for saving windows layouts and toggle between them
