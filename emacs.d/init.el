@@ -270,7 +270,7 @@
 (defvar dabbrev-case-fold-search nil)
 
 ;;----------------------------------------------------------------------------
-;; enable global electric-indent-mode
+;; electric mode don't indent current line
 ;; ----------------------------------------------------------------------------
 (setq-default electric-indent-inhibit t)
 
@@ -693,7 +693,7 @@ In case the execution fails, return an error."
 (add-hook 'flycheck-mode-hook #'use-tslint-from-node-modules)
 
 ;;----------------------------------------------------------------------------
-;; new line and indent
+;; new line above/below current line with fixed line indentation
 ;;----------------------------------------------------------------------------
 (defun newline-before-the-current-line (&optional *newline-above)
   "Move to end of line, enter a newline, and reindent.
@@ -718,6 +718,26 @@ In case the execution fails, return an error."
         (indent-to-column col)))))
 
 (global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
+
+;;----------------------------------------------------------------------------
+;; new line above current line and indent accordingly
+;;----------------------------------------------------------------------------
+(defun newline-before-the-current-line-indent ()
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (unless (bolp)
+    (beginning-of-line))
+  (newline)
+  (forward-line -1)
+  (indent-according-to-mode))
+
+(global-set-key (kbd "S-<return>") 'newline-before-the-current-line-indent)
+
+;;----------------------------------------------------------------------------
+;; swap query replace - query replace regexp keybindings
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "C-M-%") 'query-replace)
+(global-set-key (kbd "M-%") 'query-replace-regexp)
 
 ;;----------------------------------------------------------------------------
 ;; M-] to indent and M-[ to unindent
@@ -961,7 +981,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -972,6 +992,8 @@ In case the execution fails, return an error."
             (defvar js-indent-level nil)
             (setq js-indent-level 2)
             (local-set-key (kbd "C-c e") '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "node")))
+            (local-set-key (kbd "C-c C-b") 'sgml-skip-tag-backward)
+            (local-set-key (kbd "C-c C-f") 'sgml-skip-tag-forward)
             (local-set-key (kbd "C-c p") 'prettier-js)
             (local-set-key (kbd "M-j") 'c-indent-new-comment-line)))
 
