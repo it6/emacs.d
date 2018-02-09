@@ -981,7 +981,7 @@ In case the execution fails, return an error."
 ;; prettier js used to format javascript, useful for react and jsx
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -995,6 +995,7 @@ In case the execution fails, return an error."
             (local-set-key (kbd "C-c C-b") 'sgml-skip-tag-backward)
             (local-set-key (kbd "C-c C-f") 'sgml-skip-tag-forward)
             (local-set-key (kbd "C-c p") 'prettier-js)
+            (local-set-key (kbd "C-c b") 'web-beautify-js)
             (local-set-key (kbd "M-j") 'c-indent-new-comment-line)))
 
 ;;----------------------------------------------------------------------------
@@ -1223,9 +1224,7 @@ In case the execution fails, return an error."
   (setq company-selection-wrap-around t)
   (setq company-show-numbers t)
   (defvar company-dabbrev-downcase nil)
-  ;; (setq company-dabbrev-downcase nil)
   (defvar company-dabbrev-other-buffers nil)
-  ;; (setq company-dabbrev-other-buffers nil)
   (defvar company-dabbrev-ignore-case nil)
   (setq company-dabbrev-ignore-case t)
   (defvar company-dabbrev-code-everywhere nil)
