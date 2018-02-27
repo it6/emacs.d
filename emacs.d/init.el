@@ -1298,30 +1298,6 @@ In that case, insert the number."
          ("C-c d u" . md/duplicate-up)))
 
 ;;----------------------------------------------------------------------------
-;; github gist
-;;----------------------------------------------------------------------------
-(use-package gist
-  :bind (("C-c g l" . gist-list)
-         ("C-c g r" . gist-region-or-buffer-private)
-         ("C-c g c" . gist-buffer))
-  :init
-  (setq gist-ask-for-description t
-        gist-ask-for-filename t
-        gist-list-format
-        '((created "Created" 15 nil
-                   "%D %R")
-          (visibility "Visibility" 10 nil
-                      (lambda (public)
-                        (or (and public "public")
-                            "private")))
-          (description "Description" 30 nil identity)
-          (files "Files" 0 nil
-                 (lambda (names)
-                   (mapconcat 'identity names ", ")))))
-  :config
-  (setq gist-view-gist t))
-
-;;----------------------------------------------------------------------------
 ;; cut/copy the current line if no region is active
 ;;----------------------------------------------------------------------------
 (use-package whole-line-or-region
@@ -1382,10 +1358,24 @@ In that case, insert the number."
     (add-hook hook #'rainbow-delimiters-mode)))
 
 ;;----------------------------------------------------------------------------
+;; Highlight-Parentheses
+;; highlight matching first level parens
+;;----------------------------------------------------------------------------
+(use-package highlight-parentheses
+  :init
+  (add-hook 'prog-mode-hook #'highlight-parentheses-mode)
+  :diminish highlight-parentheses-mode
+  :config
+  (progn
+    (setq hl-paren-colors
+      '("IndianRed1"))
+  (set-face-attribute 'hl-paren-colors nil)
+  (set-face-attribute 'hl-paren-face nil :weight 'ultra-bold)
+  (setq hl-paren-background-colors '("#444154"))))
+
+;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
-
 
 
 
