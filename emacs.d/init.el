@@ -26,6 +26,11 @@
 (setq inhibit-default-init t)
 
 ;;----------------------------------------------------------------------------
+;; remove cursor lag when navigating
+;;----------------------------------------------------------------------------
+(setq auto-window-vscroll nil)
+
+;;----------------------------------------------------------------------------
 ;; Activate packages and add the MELPA package archive
 ;;----------------------------------------------------------------------------
 (package-initialize)
@@ -537,40 +542,26 @@ If not in a Git repo, uses the current directory."
 (global-set-key (kbd "C-c c g") 'git-root-path)
 
 ;;----------------------------------------------------------------------------
-;; copy/paste/clear current line or selected text to register 1
+;; open recent directories, requires ivy (part of swiper)
+;; http://stackoverflow.com/questions/23328037/in-emacs-how-to-maintain-a-list-of-recent-directories
 ;;----------------------------------------------------------------------------
-(defun xah-append-to-register-1 ()
-  "Append current line or text selection to register 1.
-When no selection, append current line with newline char.
-See also: `xah-paste-from-register-1', `copy-to-register'.
-
-URL `http://ergoemacs.org/emacs/elisp_copy-paste_register_1.html'
-Version 2015-12-08"
+(defun bjm/ivy-dired-recent-dirs ()
+  "Present a list of recently used directories and open the selected one in dired."
   (interactive)
-  (let ($p1 $p2)
-    (if (region-active-p)
-        (progn (setq $p1 (region-beginning))
-               (setq $p2 (region-end)))
-      (progn (setq $p1 (line-beginning-position))
-             (setq $p2 (line-end-position))))
-    (append-to-register ?1 $p1 $p2)
-    (with-temp-buffer (insert "\n")
-                      (append-to-register ?1 (point-min) (point-max)))
-    (message "Appended to register 1: 「%s」." (buffer-substring-no-properties $p1 $p2))))
+  (let ((recent-dirs
+         (delete-dups
+          (mapcar (lambda (file)
+                    (if (file-directory-p file) file (file-name-directory file)))
+                  recentf-list))))
 
-(defun xah-clear-register-1 ()
-  "Clear register 1.
-See also: `xah-paste-from-register-1', `copy-to-register'.
+    (let ((dir (ivy-read "Directory: "
+                         recent-dirs
+                         :re-builder #'ivy--regex
+                         :sort nil
+                         :initial-input nil)))
+      (dired dir))))
 
-URL `http://ergoemacs.org/emacs/elisp_copy-paste_register_1.html'
-Version 2015-12-08"
-  (interactive)
-  (progn
-    (copy-to-register ?1 (point-min) (point-min))
-    (message "Cleared register 1.")))
-
-(global-set-key (kbd "C-c c r") 'xah-append-to-register-1)
-(global-set-key (kbd "C-c c c") 'xah-clear-register-1)
+(global-set-key (kbd "C-x C-d") 'bjm/ivy-dired-recent-dirs)
 
 ;;----------------------------------------------------------------------------
 ;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
@@ -731,7 +722,18 @@ In case the execution fails, return an error."
   (forward-line -1)
   (indent-according-to-mode))
 
-(global-set-key (kbd "S-<return>") 'newline-before-the-current-line-indent)
+(global-set-key (kbd "M-S-<return>") 'newline-before-the-current-line-indent)
+
+;;----------------------------------------------------------------------------
+;; new line and indent
+;;----------------------------------------------------------------------------
+(defun newline-at-end-of-line ()
+     "Move to end of line, enter a newline, and reindent."
+     (interactive)
+     (move-end-of-line 1)
+     (newline-and-indent))
+
+(global-set-key (kbd "M-<return>") 'newline-at-end-of-line)
 
 ;;----------------------------------------------------------------------------
 ;; swap query replace - query replace regexp keybindings
@@ -840,6 +842,7 @@ In case the execution fails, return an error."
   (setq recentf-exclude '("/\\.git/.*\\'"
                           "/elpa/.*\\'"
                           "/elfeed/.*\\'"
+                          "/image-dired/.*\\'"
                           "/cache/.*\\'"
                           ".*\\.gz\\'"))
   (setq recentf-max-saved-items 100)
@@ -982,6 +985,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
   ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  ;; :config (setq prettier-js-show-errors 'echo)
   :diminish prettier-js-mode)
 
 ;;----------------------------------------------------------------------------
@@ -1012,7 +1016,7 @@ In case the execution fails, return an error."
   (defvar tide-tsserver-directory)
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
-  (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
+  ;; (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
   ;; (tide-hl-identifier-mode +1)
   (setq flycheck-check-syntax-automatically '(save mode-enabled)))
 
@@ -1021,7 +1025,12 @@ In case the execution fails, return an error."
   :config
   (defvar typescript-indent-level nil)
   (setq typescript-indent-level 2)
+  ;; (setq typescript-indent-switch-clauses nil)
+  ;; (setq tide-completion-enable-autoimport-suggestions nil)
   (define-key tide-mode-map (kbd "C-c p") 'prettier-js)
+  (define-key tide-mode-map (kbd "C-c C-b") 'sgml-skip-tag-backward)
+  (define-key tide-mode-map (kbd "C-c C-f") 'sgml-skip-tag-forward)
+
   (define-key tide-mode-map (kbd "C-c b") 'tide-format)
   (define-key tide-mode-map (kbd "C-c F") 'tide-fix))
 
@@ -1154,8 +1163,11 @@ In case the execution fails, return an error."
   ;; ignore dot files from counsel find file to see them press dot
   (setq counsel-find-file-ignore-regexp "\\`\\.")
   (setq counsel-preselect-current-file t)
-  (setq counsel-grep-base-command
-        "rg -i -M 120 --no-heading --line-number --color never %s %s"))
+  (setq counsel-git-cmd "rg --files")
+  (setq counsel-rg-base-command
+        "rg -i -M 120 --no-heading --line-number --color never %s ."))
+  ;; (setq counsel-grep-base-command
+  ;;       "rg -i -M 120 --no-heading --line-number --color never %s %s"))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
@@ -1180,12 +1192,12 @@ In case the execution fails, return an error."
   ;; Enable syntax coloring for Hydra definitions
   (hydra-add-font-lock)
 
-  (defhydra hydra-next-previous-buffer
-    (global-map "C-x"
+  (defhydra hydra-diff-hl
+    (global-map "C-c v"
                 :color red)
-    "cycle buffers"
-    ("<right>" next-buffer "→ next buffer")
-    ("<left>" (lambda () (interactive) (previous-buffer)) "← previous buffer")
+    "diff-hl"
+    ("p" diff-hl-previous-hunk "prev hunk")
+    ("n" diff-hl-next-hunk "next hunk")
     ("q" nil "Quit"))
 
   (defhydra hydra-fold
@@ -1271,6 +1283,25 @@ In that case, insert the number."
   (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
 ;;----------------------------------------------------------------------------
+;; Move buffers between frames
+;;----------------------------------------------------------------------------
+(use-package buffer-move
+  :bind(
+        ("<M-S-up>"    . buf-move-up)
+        ("<M-S-down>"  . buf-move-down)
+        ("<M-S-left>"  . buf-move-left)
+        ("<M-S-right>" . buf-move-right)))
+
+;;----------------------------------------------------------------------------
+;; Fast buffer switching
+;; shift <-- --> up down arrow keys to move point between buffers
+;;----------------------------------------------------------------------------
+(use-package windmove
+  :config
+  (setq windmove-wrap-around t)
+  (windmove-default-keybindings 'meta))
+
+;;----------------------------------------------------------------------------
 ;; winner mode for saving windows layouts and toggle between them
 ;; undo and redo window configuration
 ;;----------------------------------------------------------------------------
@@ -1351,11 +1382,7 @@ In that case, insert the number."
 ;;----------------------------------------------------------------------------
 (use-package rainbow-delimiters
   :init
-  (dolist (hook '(emacs-lisp-mode-hook
-                  js-mode-hook
-                  css-mode-hook
-                  tide-mode-hook))
-    (add-hook hook #'rainbow-delimiters-mode)))
+  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
 
 ;;----------------------------------------------------------------------------
 ;; Highlight-Parentheses
@@ -1366,16 +1393,56 @@ In that case, insert the number."
   (add-hook 'prog-mode-hook #'highlight-parentheses-mode)
   :diminish highlight-parentheses-mode
   :config
-  (progn
-    (setq hl-paren-colors
-      '("IndianRed1"))
-  (set-face-attribute 'hl-paren-colors nil)
-  (set-face-attribute 'hl-paren-face nil :weight 'ultra-bold)
-  (setq hl-paren-background-colors '("#444154"))))
+  ;; highlight first level from current point location
+  (setq hl-paren-colors '("IndianRed1"))
+  (setq hl-paren-background-colors '("#444154")))
+
+;;----------------------------------------------------------------------------
+;; insert relative/full path between two files
+;;----------------------------------------------------------------------------
+(defun bjm/insert-file-name (filename &optional args)
+  "Insert name of file FILENAME into buffer after point, takes ARGS.
+
+  Prefixed with \\[universal-argument], expand the file name to
+  its fully canocalized path.  See `expand-file-name'.
+
+  Prefixed with \\[negative-argument], use relative path to file
+  name from current directory, `default-directory'.  See
+  `file-relative-name'.
+
+  The default with no prefix is to insert the file name exactly as
+  it appears in the minibuffer prompt."
+  ;; Based on insert-file in Emacs -- ashawley 20080926
+  (interactive "*fInsert file name: \nP")
+  (cond ((eq '- args)
+         (insert (expand-file-name filename)))
+        ((not (null args))
+         (insert filename))
+        (t
+         (insert (file-relative-name filename)))))
+
+(global-set-key (kbd "C-c i p") 'bjm/insert-file-name)
+
+;;----------------------------------------------------------------------------
+;; better hippie expansions with M-/
+;;----------------------------------------------------------------------------
+(global-set-key (kbd "M-/") 'hippie-expand)
+(setq hippie-expand-try-functions-list
+      '(try-expand-dabbrev
+        try-expand-dabbrev-all-buffers
+        try-expand-dabbrev-from-kill
+        try-complete-file-name-partially
+        try-complete-file-name
+        try-expand-all-abbrevs
+        try-expand-list
+        try-expand-line
+        try-complete-lisp-symbol-partially
+        try-complete-lisp-symbol))
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
 
 
 
