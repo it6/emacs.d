@@ -100,6 +100,7 @@
 ;;----------------------------------------------------------------------------
 (global-unset-key [M-left])
 (global-unset-key [M-right])
+(global-unset-key (kbd "s-n"))
 
 ;;----------------------------------------------------------------------------
 ;; go download any missing packages
@@ -259,20 +260,14 @@
 (setq read-buffer-completion-ignore-case t)
 
 ;;----------------------------------------------------------------------------
-;; auto generate closing brackets globally using Electric pair mode
-;;----------------------------------------------------------------------------
-(electric-pair-mode)
-
-;;----------------------------------------------------------------------------
-;; enable global case sensitive search
-;; works when searching rg but not so great for swiper within buffer
-;; ----------------------------------------------------------------------------
-;; (setq-default case-fold-search nil)
-
-;;----------------------------------------------------------------------------
 ;; make dabbrev completion case sensitive
 ;;----------------------------------------------------------------------------
 (defvar dabbrev-case-fold-search nil)
+
+;;----------------------------------------------------------------------------
+;; auto generate closing brackets globally using Electric pair mode
+;;----------------------------------------------------------------------------
+(electric-pair-mode)
 
 ;;----------------------------------------------------------------------------
 ;; electric mode don't indent current line
@@ -293,16 +288,6 @@
 ;; delete matching pairs
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-c d p") 'delete-pair)
-
-;;----------------------------------------------------------------------------
-;; delete back to sexpression
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "M-C-<backspace>") 'backward-kill-sexp)
-
-;;----------------------------------------------------------------------------
-;; set M-` to toggle all open EMACS windows
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "M-`") 'ns-next-frame)
 
 ;;----------------------------------------------------------------------------
 ;; delete selection when pasting text
@@ -1393,8 +1378,13 @@ In that case, insert the number."
   (add-hook 'prog-mode-hook #'highlight-parentheses-mode)
   :diminish highlight-parentheses-mode
   :config
-  ;; highlight first level from current point location
-  (setq hl-paren-colors '("IndianRed1"))
+  ;; highlight one level from current point location
+  ;; #89DA3F used by spacemacs to highlight paren-mode
+  ;; (setq hl-paren-colors '("IndianRed1", ""))
+  (setq hl-paren-colors '(:inherit))
+  (set-face-attribute 'hl-paren-colors nil)
+  (set-face-attribute 'hl-paren-face nil :underline t)
+  ;; (set-face-attribute 'hl-paren-face nil :weight 'ultra-bold :underline t))
   (setq hl-paren-background-colors '("#444154")))
 
 ;;----------------------------------------------------------------------------
@@ -1424,25 +1414,8 @@ In that case, insert the number."
 (global-set-key (kbd "C-c i p") 'bjm/insert-file-name)
 
 ;;----------------------------------------------------------------------------
-;; better hippie expansions with M-/
-;;----------------------------------------------------------------------------
-(global-set-key (kbd "M-/") 'hippie-expand)
-(setq hippie-expand-try-functions-list
-      '(try-expand-dabbrev
-        try-expand-dabbrev-all-buffers
-        try-expand-dabbrev-from-kill
-        try-complete-file-name-partially
-        try-complete-file-name
-        try-expand-all-abbrevs
-        try-expand-list
-        try-expand-line
-        try-complete-lisp-symbol-partially
-        try-complete-lisp-symbol))
-
-;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
