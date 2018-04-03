@@ -142,6 +142,16 @@
 (setq scroll-error-top-bottom t)
 
 ;;----------------------------------------------------------------------------
+;; Always scroll evenly with the mouse
+;;----------------------------------------------------------------------------
+(setq mouse-wheel-progressive-speed nil)
+
+;;----------------------------------------------------------------------------
+;; Enable faster scrolling
+;;----------------------------------------------------------------------------
+(setq fast-but-imprecise-scrolling t)
+
+;;----------------------------------------------------------------------------
 ;; set option as super key and command as meta key
 ;;----------------------------------------------------------------------------
 (setq mac-option-modifier 'super)
@@ -336,7 +346,7 @@
 ;; set regular font and unicode character font
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "operator mono")
-(setq default-frame-alist '((font . "operator mono 13")))
+(setq default-frame-alist '((font . "operator mono 14")))
 
 ;;----------------------------------------------------------------------------
 ;; disable toolbars
@@ -380,6 +390,30 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 
 (global-set-key (read-kbd-macro "C-s-n") 'scroll-up-in-place)
 (global-set-key (read-kbd-macro "C-s-p") 'scroll-down-in-place)
+
+;; ----------------------------------------------------------------------------
+;; scroll up/down by one line
+;; ----------------------------------------------------------------------------
+;; (defun scroll-up-in-place (n)
+;;   "Scroll up in place takes N lines."
+;;   (interactive "p")
+;;   ;; (forward-line (- n))
+;;   (scroll-down n))
+
+;; (defun scroll-down-in-place (n)
+;;   "Scroll down in place takes N lines."
+;;   (interactive "p")
+;;   ;; (forward-line n)
+;;   (scroll-up n))
+
+;; (global-set-key (read-kbd-macro "C-s-p") 'scroll-up-in-place)
+;; (global-set-key (read-kbd-macro "C-s-n") 'scroll-down-in-place)
+
+;;----------------------------------------------------------------------------
+;; scrollers
+;;----------------------------------------------------------------------------
+;; (global-set-key (read-kbd-macro "C-s-p") "\C-u1\M-v")
+;; (global-set-key (read-kbd-macro "C-s-n") "\C-u1\C-v")
 
 ;;----------------------------------------------------------------------------
 ;; don't use ls command for dired mode
@@ -426,21 +460,19 @@ SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
 (global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
-;; delete file and buffer
+;; move deleted files/folders to system trash
 ;;----------------------------------------------------------------------------
-(defun delete-file-and-buffer ()
-  "Kill the current buffer and deletes the file it is visiting."
-  (interactive)
-  (let ((filename (buffer-file-name)))
-    (when filename
-      (if (vc-backend filename)
-          (vc-delete-file filename)
-        (progn
-          (delete-file filename)
-          (message "Deleted file %s" filename)
-          (kill-buffer))))))
+(setq delete-by-moving-to-trash t)
 
-(global-set-key (kbd "C-c d f")  'delete-file-and-buffer)
+;;----------------------------------------------------------------------------
+;; Trash support for OS X
+;;----------------------------------------------------------------------------
+(use-package osx-trash
+  :if (eq system-type 'darwin)
+  :ensure t
+  :init (osx-trash-setup))
+
+(global-set-key (kbd "C-c d f")  'delete-file)
 
 ;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
@@ -480,7 +512,7 @@ If `universal-argument' is called first, kill special buffers too"
 ;;----------------------------------------------------------------------------
 ;; copy file or directory path from current buffer to clipboard
 ;;----------------------------------------------------------------------------
-(defun surya-copy-file-path (&optional *dir-path-only-p)
+(defun sk/copy-file-path (&optional *dir-path-only-p)
   "Copy the current buffer's file path or dired path to `kill-ring'.
 Result is full path.
 *DIR-PATH-ONLY-P is optional 'universal-argument' invoked using `C-u'
@@ -501,7 +533,7 @@ If `universal-argument' is called first, copy only the dir path"
          (message "File path copied: %s" -fpath)
          -fpath )))))
 
-(global-set-key (kbd "C-c c f") 'surya-copy-file-path)
+(global-set-key (kbd "C-c c f") 'sk/copy-file-path)
 
 ;;----------------------------------------------------------------------------
 ;; copy git root path to clipboard.
@@ -549,23 +581,9 @@ If not in a Git repo, uses the current directory."
 (global-set-key (kbd "C-x C-d") 'bjm/ivy-dired-recent-dirs)
 
 ;;----------------------------------------------------------------------------
-;; fix backward-up-list to understand quotes, see http://bit.ly/h7mdIL
-;;----------------------------------------------------------------------------
-(defun backward-up-sexp (arg)
-  "Jump up to the start of the ARG'th enclosing sexp."
-  (interactive "p")
-  (let ((ppss (syntax-ppss)))
-    (cond ((elt ppss 3)
-           (goto-char (elt ppss 8))
-           (backward-up-sexp (1- arg)))
-          ((backward-up-list arg)))))
-
-(global-set-key [remap backward-up-list] 'backward-up-sexp) ; C-M-u, C-M-up
-
-;;----------------------------------------------------------------------------
 ;; launch terminal at the git root or at the current file location
 ;;----------------------------------------------------------------------------
-(defun surya/open-Terminal-here (&optional *git-root-path)
+(defun sk/open-Terminal-here (&optional *git-root-path)
   "Launch terminal from the current file location.  Use GIT-ROOT-PATH."
   (interactive "P")
   (if *git-root-path
@@ -581,7 +599,7 @@ If not in a Git repo, uses the current directory."
        (format "open -a Terminal %s"
                (expand-file-name default-directory))))))
 
-(bind-key "C-c o t" 'surya/open-Terminal-here)
+(bind-key "C-c o t" 'sk/open-Terminal-here)
 
 ;;----------------------------------------------------------------------------
 ;; ansi-term and bash settings within emacs
@@ -721,6 +739,32 @@ In case the execution fails, return an error."
 (global-set-key (kbd "M-<return>") 'newline-at-end-of-line)
 
 ;;----------------------------------------------------------------------------
+;; insert relative/full path between two files
+;;----------------------------------------------------------------------------
+(defun bjm/insert-file-name (filename &optional args)
+  "Insert name of file FILENAME into buffer after point, takes ARGS.
+
+  Prefixed with \\[universal-argument], expand the file name to
+  its fully canocalized path.  See `expand-file-name'.
+
+  Prefixed with \\[negative-argument], use relative path to file
+  name from current directory, `default-directory'.  See
+  `file-relative-name'.
+
+  The default with no prefix is to insert the file name exactly as
+  it appears in the minibuffer prompt."
+  ;; Based on insert-file in Emacs -- ashawley 20080926
+  (interactive "*fInsert file name: \nP")
+  (cond ((eq '- args)
+         (insert (expand-file-name filename)))
+        ((not (null args))
+         (insert filename))
+        (t
+         (insert (file-relative-name filename)))))
+
+(global-set-key (kbd "C-c i p") 'bjm/insert-file-name)
+
+;;----------------------------------------------------------------------------
 ;; swap query replace - query replace regexp keybindings
 ;;----------------------------------------------------------------------------
 (global-set-key (kbd "C-M-%") 'query-replace)
@@ -782,9 +826,9 @@ In case the execution fails, return an error."
 (global-set-key [remap kill-whole-line] 'smart-kill-whole-line)
 
 ;;----------------------------------------------------------------------------
-;; use package wgrep to edit multiple search results
+;; use wgrep-ag to edit/overwrite readable buffers
 ;;----------------------------------------------------------------------------
-(use-package wgrep)
+(use-package wgrep-ag)
 
 ;;----------------------------------------------------------------------------
 ;; treat all themes as safe
@@ -847,7 +891,6 @@ In case the execution fails, return an error."
 ;; prompts all available key bindings in a given buffer
 ;;----------------------------------------------------------------------------
 (use-package which-key
-  :diminish which-key-mode
   :bind ("C-c h" . which-key-show-top-level)
   :commands which-key-mode
   :init
@@ -862,7 +905,6 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package hideshow
   :commands hs-minor-mode
-  :diminish hs-minor-mode
   :init
   (dolist (hook '(c-mode-common-hook
                   prog-mode-hook
@@ -873,15 +915,6 @@ In case the execution fails, return an error."
   ;; Unfold when search is active
   (setq hs-isearch-open t))
 
-;;----------------------------------------------------------------------------
-;; don't show some minor modes
-;;----------------------------------------------------------------------------
-(use-package diminish
-  :config
-  (eval-after-load "hideshow" '(diminish 'hs-minor-mode))
-  (eval-after-load "eldoc" '(diminish 'eldoc-mode))
-  (eval-after-load "autorevert" '(diminish 'auto-revert-mode))
-  (eval-after-load "abbrev" '(diminish 'abbrev-mode)))
 
 ;;----------------------------------------------------------------------------
 ;; expand region
@@ -893,7 +926,6 @@ In case the execution fails, return an error."
 ;; symbol highlight at point and navigate next previous
 ;;----------------------------------------------------------------------------
 (use-package highlight-symbol
-  :diminish highlight-symbol-mode
   :bind (
          ("M-n" . highlight-symbol-next)
          ("M-p" . highlight-symbol-prev))
@@ -908,12 +940,12 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package iedit
   :commands iedit-mode
-  :bind ("M-I" . iedit-mode)
+  :bind (("M-I" . iedit-mode))
   :config (progn
             (setq iedit-log-level 0)
             (define-key iedit-mode-keymap "\C-h" nil)
-            (define-key iedit-lib-keymap "\C-s" 'iedit-next-occurrence)
-            (define-key iedit-lib-keymap "\C-r" 'iedit-prev-occurrence))
+            (define-key iedit-mode-occurrence-keymap "\M-n" 'iedit-next-occurrence)
+            (define-key iedit-mode-occurrence-keymap "\M-p" 'iedit-prev-occurrence))
   :init (setq iedit-toggle-key-default nil))
 
 ;;----------------------------------------------------------------------------
@@ -928,28 +960,31 @@ In case the execution fails, return an error."
 ;; load yasnippets
 ;;----------------------------------------------------------------------------
 (use-package yasnippet
-  :diminish yas-minor-mode
   :init
   (add-hook 'sgml-mode-hook #'yas-minor-mode)
   (add-hook 'prog-mode-hook #'yas-minor-mode)
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
   :config
-  ;; (setq-default yas-snippet-dirs '("~/.emacs.d/snippets"))
   (setq yas-indent-line 'fixed)
   (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
+;; auto-yasnippet
+;; hybrid of keyboard macro and yasnippet
+;;----------------------------------------------------------------------------
+(use-package auto-yasnippet
+  :commands (aya-create aya-expand)
+  :bind (
+         ("C-c y c" . aya-create)
+         ("C-c y e" . aya-expand)))
+
+;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
-;; feature-mode needs a hook to diminish orgtbl-mode
 ;;----------------------------------------------------------------------------
 (use-package feature-mode
   :bind (:map feature-mode-map
-              ("RET" . newline-and-indent))
-  :init
-  (add-hook 'feature-mode-hook
-            (lambda ()
-              (diminish 'orgtbl-mode))))
+              ("RET" . newline-and-indent)))
 
 ;;----------------------------------------------------------------------------
 ;; enable flycheck mode globally
@@ -965,13 +1000,11 @@ In case the execution fails, return an error."
 (use-package web-beautify)
 
 ;;----------------------------------------------------------------------------
-;; use Prettier for JS mode formatting
-;; prettier js used to format javascript, useful for react and jsx
+;; use Prettier for formatting
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
   ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
-  ;; :config (setq prettier-js-show-errors 'echo)
-  :diminish prettier-js-mode)
+  )
 
 ;;----------------------------------------------------------------------------
 ;; javascript mode hook keybindings
@@ -1001,23 +1034,24 @@ In case the execution fails, return an error."
   (defvar tide-tsserver-directory)
   (setq tide-tsserver-executable (expand-file-name tide--tsserver tide-tsserver-directory))
   (tide-setup)
-  ;; (flycheck-add-next-checker 'typescript-tide '(t . typescript-tslint) 'append)
   ;; (tide-hl-identifier-mode +1)
   (setq flycheck-check-syntax-automatically '(save mode-enabled)))
 
 (use-package tide
-  :diminish tide-mode
   :config
   (defvar typescript-indent-level nil)
   (setq typescript-indent-level 2)
   ;; (setq typescript-indent-switch-clauses nil)
   ;; (setq tide-completion-enable-autoimport-suggestions nil)
   (define-key tide-mode-map (kbd "C-c p") 'prettier-js)
+  (define-key tide-mode-map (kbd "C-c b") 'tide-format)
   (define-key tide-mode-map (kbd "C-c C-b") 'sgml-skip-tag-backward)
   (define-key tide-mode-map (kbd "C-c C-f") 'sgml-skip-tag-forward)
-
-  (define-key tide-mode-map (kbd "C-c b") 'tide-format)
-  (define-key tide-mode-map (kbd "C-c F") 'tide-fix))
+  (define-key tide-mode-map (kbd "C-c t o") 'tide-organize-imports)
+  (define-key tide-mode-map (kbd "C-c t r") 'tide-rename-symbol)
+  (define-key tide-mode-map (kbd "C-c t s") 'tide-restart-server)
+  (define-key tide-mode-map (kbd "C-c t u") 'tide-references)
+  (define-key tide-mode-map (kbd "C-c t f") 'tide-fix))
 
 (add-hook 'typescript-mode-hook #'setup-tide-mode)
 
@@ -1040,7 +1074,6 @@ In case the execution fails, return an error."
 (use-package tagedit
   :init
   (add-hook 'html-mode-hook #'tagedit-mode)
-  :diminish tagedit-mode
   :commands tagedit-mode
   :config
   (tagedit-add-paredit-like-keybindings))
@@ -1059,7 +1092,8 @@ In case the execution fails, return an error."
           (lambda ()
             (defvar css-indent-offset nil)
             (setq css-indent-offset 2)
-            (local-set-key (kbd "C-c p") 'prettier-js)))
+            (local-set-key (kbd "C-c p") 'prettier-js)
+            (local-set-key (kbd "C-c b") 'web-beautify-css)))
 
 ;; ----------------------------------------------------------------------------
 ;; less mode, and web beautify css
@@ -1067,10 +1101,47 @@ In case the execution fails, return an error."
 (use-package less-css-mode)
 
 ;;----------------------------------------------------------------------------
+;; rust mode
+;;----------------------------------------------------------------------------
+(use-package rust-mode
+  :mode "\\.rs\\'"
+  :config
+  (setq rust-format-on-save t)
+  (add-hook 'rust-mode-hook
+            (lambda ()
+              (local-set-key (kbd "C-c b") #'rust-format-buffer))))
+
+(use-package cargo
+  :init
+  (add-hook 'rust-mode-hook 'cargo-minor-mode)
+  (add-hook 'toml-mode-hook 'cargo-minor-mode))
+
+(use-package flycheck-rust
+  :init
+  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+
+;;----------------------------------------------------------------------------
+;; compile rust file and display output in mini buffer
+;;----------------------------------------------------------------------------
+(defun rust-save-compile-and-run ()
+  "Run and compile rust code."
+  (interactive)
+  (save-buffer)
+  (if (locate-dominating-file (buffer-file-name) "Cargo.toml")
+      (compile "cargo run")
+    (shell-command
+     (format "rustc %s && %s"
+             (buffer-file-name)
+             (file-name-sans-extension (buffer-file-name))))))
+
+(add-hook 'rust-mode-hook
+          (lambda ()
+            (define-key rust-mode-map (kbd "C-c e") 'rust-save-compile-and-run)))
+
+;;----------------------------------------------------------------------------
 ;; add rainbow mode to highlight hex/rgb colors in html, css, sass, js etc
 ;;----------------------------------------------------------------------------
 (use-package rainbow-mode
-  :diminish rainbow-mode
   :config
   (dolist (hook '(css-mode-hook html-mode-hook js-mode-hook emacs-lisp-mode-hook))
     (add-hook hook 'rainbow-mode)))
@@ -1097,17 +1168,26 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 (use-package magit
   :config
+  (defun mu-magit-kill-buffers ()
+    "Restore window configuration and kill all Magit buffers."
+    (interactive)
+    (let ((buffers (magit-mode-get-buffers)))
+      (magit-restore-window-configuration)
+      (mapc #'kill-buffer buffers)))
+
   (magit-define-popup-switch 'magit-push-popup ?u
-    "Set upstream" "--set-upstream")
+                             "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
-  :bind ("C-x g" . magit-status))
+  :bind (
+         ("C-x g" . magit-status)
+         :map magit-status-mode-map
+         (("q" . mu-magit-kill-buffers))))
 
 ;;----------------------------------------------------------------------------
 ;; Ivy
 ;;----------------------------------------------------------------------------
 (use-package ivy
   :ensure ivy-hydra
-  :diminish ivy-mode
   :bind (("C-x b" . ivy-switch-buffer)
          :map ivy-minibuffer-map
          ("<return>" . ivy-alt-done))
@@ -1132,7 +1212,6 @@ In case the execution fails, return an error."
 ;; Counsel
 ;;----------------------------------------------------------------------------
 (use-package counsel
-  :diminish counsel-mode
   :bind (
          ("C-c f" . counsel-git)
          ("C-c s" . counsel-rg)
@@ -1151,8 +1230,8 @@ In case the execution fails, return an error."
   (setq counsel-git-cmd "rg --files")
   (setq counsel-rg-base-command
         "rg -i -M 120 --no-heading --line-number --color never %s ."))
-  ;; (setq counsel-grep-base-command
-  ;;       "rg -i -M 120 --no-heading --line-number --color never %s %s"))
+;; (setq counsel-grep-base-command
+;;       "rg -i -M 120 --no-heading --line-number --color never %s %s"))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
@@ -1183,24 +1262,15 @@ In case the execution fails, return an error."
     "diff-hl"
     ("p" diff-hl-previous-hunk "prev hunk")
     ("n" diff-hl-next-hunk "next hunk")
-    ("q" nil "Quit"))
-
-  (defhydra hydra-fold
-    (global-map "C-c @"
-                :color red)
-    "hide/show"
-    ("h" hs-hide-all "hide all")
-    ("s" hs-show-all "show all")
-    ("l" hs-hide-level "hide same level")
-    ("t" hs-toggle-hiding "toggle show hide")
-    ("q" nil "Quit")))
+    ("h" diff-hl-revert-hunk "revert hunk")
+    ("b" vc-revert "revert buffer")
+    ("q" nil "Quit")
+    ("RET" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
 ;; Company mode
 ;;----------------------------------------------------------------------------
 (use-package company
-  :bind ("C-c t" . company-manual-begin)
-  :diminish company-mode
   :commands global-company-mode
   :init
   (add-hook 'after-init-hook #'global-company-mode)
@@ -1216,7 +1286,7 @@ In case the execution fails, return an error."
                            company-dabbrev))
   (setq company-tooltip-align-annotations t)
   (setq company-tooltip-flip-when-above t)
-  (setq company-idle-delay 0.4)
+  (setq company-idle-delay 0)
   (setq company-minimum-prefix-length 3)
   (setq company-selection-wrap-around t)
   (setq company-show-numbers t)
@@ -1254,10 +1324,12 @@ In that case, insert the number."
 ;;----------------------------------------------------------------------------
 ;; use rg frontend for ripgrep search
 ;;----------------------------------------------------------------------------
-(use-package rg
-  :config
-  (rg-enable-default-bindings (kbd "C-c r"))
-  (setq rg-group-result t))
+;; (use-package rg
+;;   :config
+;;   (rg-enable-default-bindings (kbd "C-c r"))
+;;   (setq rg-group-result t)
+;;   ;; rg wgrep needs wgrep-ag-setup to edit grouped results
+;;   (add-hook 'rg-mode-hook 'wgrep-ag-setup))
 
 ;;----------------------------------------------------------------------------
 ;; ace-window to easily navigate between frames
@@ -1317,7 +1389,6 @@ In that case, insert the number."
 ;; cut/copy the current line if no region is active
 ;;----------------------------------------------------------------------------
 (use-package whole-line-or-region
-  :diminish whole-line-or-region-local-mode
   :config
   (whole-line-or-region-global-mode t))
 (make-variable-buffer-local 'whole-line-or-region-mode)
@@ -1351,7 +1422,6 @@ In that case, insert the number."
 ;; page break lines
 ;;----------------------------------------------------------------------------
 (use-package page-break-lines
-  :diminish page-break-lines-mode
   :init
   (global-page-break-lines-mode))
 
@@ -1370,52 +1440,40 @@ In that case, insert the number."
   (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
 
 ;;----------------------------------------------------------------------------
-;; Highlight-Parentheses
-;; highlight matching first level parens
+;; minions - hide all minor modes except flycheck-mode
 ;;----------------------------------------------------------------------------
-(use-package highlight-parentheses
-  :init
-  (add-hook 'prog-mode-hook #'highlight-parentheses-mode)
-  :diminish highlight-parentheses-mode
+(use-package minions
+  :init (minions-mode)
   :config
-  ;; highlight one level from current point location
-  ;; #89DA3F used by spacemacs to highlight paren-mode
-  ;; (setq hl-paren-colors '("IndianRed1", ""))
-  (setq hl-paren-colors '(:inherit))
-  (set-face-attribute 'hl-paren-colors nil)
-  (set-face-attribute 'hl-paren-face nil :underline t)
-  ;; (set-face-attribute 'hl-paren-face nil :weight 'ultra-bold :underline t))
-  (setq hl-paren-background-colors '("#444154")))
+  (setq
+   minions-direct '(flycheck-mode)))
 
 ;;----------------------------------------------------------------------------
-;; insert relative/full path between two files
+;; Zap up to char
 ;;----------------------------------------------------------------------------
-(defun bjm/insert-file-name (filename &optional args)
-  "Insert name of file FILENAME into buffer after point, takes ARGS.
+(use-package zop-to-char
+  :bind (([remap zap-to-char] . zop-to-char)))
 
-  Prefixed with \\[universal-argument], expand the file name to
-  its fully canocalized path.  See `expand-file-name'.
-
-  Prefixed with \\[negative-argument], use relative path to file
-  name from current directory, `default-directory'.  See
-  `file-relative-name'.
-
-  The default with no prefix is to insert the file name exactly as
-  it appears in the minibuffer prompt."
-  ;; Based on insert-file in Emacs -- ashawley 20080926
-  (interactive "*fInsert file name: \nP")
-  (cond ((eq '- args)
-         (insert (expand-file-name filename)))
-        ((not (null args))
-         (insert filename))
-        (t
-         (insert (file-relative-name filename)))))
-
-(global-set-key (kbd "C-c i p") 'bjm/insert-file-name)
+;;----------------------------------------------------------------------------
+;; edit semantic unit pairs
+;;----------------------------------------------------------------------------
+(use-package embrace
+  :bind (("C-c P" . embrace-commander)))
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
 
 
 
