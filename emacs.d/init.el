@@ -158,6 +158,11 @@
 (setq mac-command-modifier 'meta)
 
 ;;----------------------------------------------------------------------------
+;; use dark title bar
+;;----------------------------------------------------------------------------
+;; (add-to-list 'default-frame-alist '(ns-appearance . dark))
+
+;;----------------------------------------------------------------------------
 ;; enable all disabled commands
 ;;----------------------------------------------------------------------------
 (setq disabled-command-function nil)
@@ -361,59 +366,24 @@
 ;; ----------------------------------------------------------------------------
 ;; scroll up/down by one line, leaving cursor in place
 ;; ----------------------------------------------------------------------------
-(defun scroll-in-place (scroll-up)
-  "Scroll window up (or down) without moving point (if possible).
-SCROLL-UP is non-nil to scroll up one line, nil to scroll down."
-  (interactive)
-  (let ((pos (point))
-        (col (current-column))
-        (up-or-down (if scroll-up 1 -1)))
-    (scroll-up up-or-down)
-    (if (pos-visible-in-window-p pos)
-        (goto-char pos)
-      (if (or (eq last-command 'next-line)
-              (eq last-command 'previous-line))
-          (move-to-column temporary-goal-column)
-        (move-to-column col)
-        (setq temporary-goal-column col))
-      (setq this-command 'next-line))))
+(defun evil-scroll-line-up (count)
+  "Scrolls the window COUNT lines upwards."
+  (interactive "p")
+  :repeat nil
+  :keep-visual t
+  (let ((scroll-preserve-screen-position nil))
+    (scroll-down count)))
 
-(defun scroll-up-in-place ()
-  "Scroll window up without moving point (if possible)."
-  (interactive)
-  (scroll-in-place t))
+(defun evil-scroll-line-down (count)
+  "Scrolls the window COUNT lines downwards."
+  (interactive "p")
+  :repeat nil
+  :keep-visual t
+  (let ((scroll-preserve-screen-position nil))
+    (scroll-up count)))
 
-(defun scroll-down-in-place ()
-  "Scroll window up without moving point (if possible)."
-  (interactive)
-  (scroll-in-place nil))
-
-(global-set-key (read-kbd-macro "C-s-n") 'scroll-up-in-place)
-(global-set-key (read-kbd-macro "C-s-p") 'scroll-down-in-place)
-
-;; ----------------------------------------------------------------------------
-;; scroll up/down by one line
-;; ----------------------------------------------------------------------------
-;; (defun scroll-up-in-place (n)
-;;   "Scroll up in place takes N lines."
-;;   (interactive "p")
-;;   ;; (forward-line (- n))
-;;   (scroll-down n))
-
-;; (defun scroll-down-in-place (n)
-;;   "Scroll down in place takes N lines."
-;;   (interactive "p")
-;;   ;; (forward-line n)
-;;   (scroll-up n))
-
-;; (global-set-key (read-kbd-macro "C-s-p") 'scroll-up-in-place)
-;; (global-set-key (read-kbd-macro "C-s-n") 'scroll-down-in-place)
-
-;;----------------------------------------------------------------------------
-;; scrollers
-;;----------------------------------------------------------------------------
-;; (global-set-key (read-kbd-macro "C-s-p") "\C-u1\M-v")
-;; (global-set-key (read-kbd-macro "C-s-n") "\C-u1\C-v")
+(global-set-key (read-kbd-macro "C-s-p") 'evil-scroll-line-up)
+(global-set-key (read-kbd-macro "C-s-n") 'evil-scroll-line-down)
 
 ;;----------------------------------------------------------------------------
 ;; don't use ls command for dired mode
@@ -1271,6 +1241,7 @@ In case the execution fails, return an error."
 ;; Company mode
 ;;----------------------------------------------------------------------------
 (use-package company
+  :bind ("C-c t c" . company-manual-begin)
   :commands global-company-mode
   :init
   (add-hook 'after-init-hook #'global-company-mode)
@@ -1320,16 +1291,6 @@ In that case, insert the number."
        (if (equal k "0")
            10
          (string-to-number k))))))
-
-;;----------------------------------------------------------------------------
-;; use rg frontend for ripgrep search
-;;----------------------------------------------------------------------------
-;; (use-package rg
-;;   :config
-;;   (rg-enable-default-bindings (kbd "C-c r"))
-;;   (setq rg-group-result t)
-;;   ;; rg wgrep needs wgrep-ag-setup to edit grouped results
-;;   (add-hook 'rg-mode-hook 'wgrep-ag-setup))
 
 ;;----------------------------------------------------------------------------
 ;; ace-window to easily navigate between frames
@@ -1463,6 +1424,9 @@ In that case, insert the number."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
 
 
 
