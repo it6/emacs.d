@@ -108,6 +108,11 @@
 (setq use-package-always-ensure t)
 
 ;;----------------------------------------------------------------------------
+;; List packages
+;;----------------------------------------------------------------------------
+(bind-key "C-c p l" #'package-list-packages)
+
+;;----------------------------------------------------------------------------
 ;; set path on mac
 ;;----------------------------------------------------------------------------
 (use-package exec-path-from-shell
@@ -320,6 +325,10 @@
 (use-package dired
   :ensure nil
   :config
+  (define-key dired-mode-map "a"
+    (lambda ()
+      (interactive)
+      (find-alternate-file "..")))
   ;; Prefer g-prefixed coreutils version of standard utilities when available
   (let ((gls (executable-find "gls")))
        (when gls (setq insert-directory-program gls)))
@@ -330,6 +339,19 @@
   (setq dired-recursive-copies 'always)
   ;; Imitate orthodox file managers with two buffers open
   (setq dired-dwim-target t))
+
+;;----------------------------------------------------------------------------
+;; dired-x configuration enables `C-x C-j'
+;;----------------------------------------------------------------------------
+(use-package dired-x
+  :ensure nil
+  :config
+  (progn
+    (setq dired-omit-verbose nil)
+    ;; toggle `dired-omit-mode' with C-x M-o
+    (add-hook 'dired-mode-hook #'dired-omit-mode)
+    (setq dired-omit-files
+          (concat dired-omit-files "\\|^.DS_STORE$\\|^.git$"))))
 
 ;;----------------------------------------------------------------------------
 ;; use visible bell which works in all terminal types
