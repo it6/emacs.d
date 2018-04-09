@@ -165,7 +165,7 @@
 ;;----------------------------------------------------------------------------
 ;; use dark title bar
 ;;----------------------------------------------------------------------------
-;; (add-to-list 'default-frame-alist '(ns-appearance . dark))
+(add-to-list 'default-frame-alist '(ns-appearance . dark))
 
 ;;----------------------------------------------------------------------------
 ;; enable all disabled commands
