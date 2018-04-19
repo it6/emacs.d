@@ -98,9 +98,9 @@
 ;; removes default key binding for M-left and M-right
 ;; train myself to use M-f and M-b instead
 ;;----------------------------------------------------------------------------
-(global-unset-key [M-left])
-(global-unset-key [M-right])
-(global-unset-key (kbd "s-n"))
+(unbind-key [M-left])
+(unbind-key [M-right])
+(unbind-key (kbd "s-n"))
 
 ;;----------------------------------------------------------------------------
 ;; go download any missing packages
@@ -163,11 +163,6 @@
 (setq mac-command-modifier 'meta)
 
 ;;----------------------------------------------------------------------------
-;; use dark title bar
-;;----------------------------------------------------------------------------
-(add-to-list 'default-frame-alist '(ns-appearance . dark))
-
-;;----------------------------------------------------------------------------
 ;; enable all disabled commands
 ;;----------------------------------------------------------------------------
 (setq disabled-command-function nil)
@@ -193,6 +188,11 @@
 (setq frame-title-format
       '(:eval (if (buffer-file-name)
       (abbreviate-file-name (buffer-file-name)) "%b")))
+
+;;----------------------------------------------------------------------------
+;; use dark title bar
+;;----------------------------------------------------------------------------
+(add-to-list 'default-frame-alist '(ns-appearance . dark))
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -302,12 +302,12 @@
 ;;----------------------------------------------------------------------------
 ;; browse url of file from emacs opens in default browser
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c o b") 'browse-url-of-file)
+(bind-key (kbd "C-c o b") 'browse-url-of-file)
 
 ;;----------------------------------------------------------------------------
 ;; delete matching pairs
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-c d p") 'delete-pair)
+(bind-key (kbd "C-c d p") 'delete-pair)
 
 ;;----------------------------------------------------------------------------
 ;; delete selection when pasting text
@@ -372,7 +372,7 @@
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode character font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "operator mono")
+(set-fontset-font "fontset-default" 'unicode "operator mono 14")
 (setq default-frame-alist '((font . "operator mono 14")))
 
 ;;----------------------------------------------------------------------------
@@ -404,8 +404,8 @@
   (let ((scroll-preserve-screen-position nil))
     (scroll-up count)))
 
-(global-set-key (read-kbd-macro "C-s-p") 'evil-scroll-line-up)
-(global-set-key (read-kbd-macro "C-s-n") 'evil-scroll-line-down)
+(bind-key (read-kbd-macro "C-s-p") 'evil-scroll-line-up)
+(bind-key (read-kbd-macro "C-s-n") 'evil-scroll-line-down)
 
 ;;----------------------------------------------------------------------------
 ;; don't use ls command for dired mode
@@ -449,7 +449,7 @@
                (set-buffer-modified-p nil)
                (message "File '%s' successfully renamed to '%s'" name (file-name-nondirectory new-name))))))))
 
-(global-set-key (kbd "C-c n") 'rename-this-buffer-and-file)
+(bind-key (kbd "C-c n") 'rename-this-buffer-and-file)
 
 ;;----------------------------------------------------------------------------
 ;; move deleted files/folders to system trash
@@ -464,7 +464,7 @@
   :ensure t
   :init (osx-trash-setup))
 
-(global-set-key (kbd "C-c d f")  'delete-file)
+(bind-key (kbd "C-c d f")  'delete-file)
 
 ;;----------------------------------------------------------------------------
 ;; set scratch buffer to js-mode and never kill it
@@ -499,7 +499,7 @@ If `universal-argument' is called first, kill special buffers too"
         (buffer-list))
   (message "Closed all other buffers"))
 
-(global-set-key (kbd "C-c k") 'kill-other-buffers)
+(bind-key (kbd "C-c k") 'kill-other-buffers)
 
 ;;----------------------------------------------------------------------------
 ;; copy file or directory path from current buffer to clipboard
@@ -525,7 +525,7 @@ If `universal-argument' is called first, copy only the dir path"
          (message "File path copied: %s" -fpath)
          -fpath )))))
 
-(global-set-key (kbd "C-c c f") 'sk/copy-file-path)
+(bind-key (kbd "C-c c f") 'sk/copy-file-path)
 
 ;;----------------------------------------------------------------------------
 ;; copy git root path to clipboard.
@@ -548,7 +548,7 @@ If not in a Git repo, uses the current directory."
       (kill-new default-directory)
       (message "File not in GIT repo, copied default path:%s" default-directory))))
 
-(global-set-key (kbd "C-c c g") 'git-root-path)
+(bind-key (kbd "C-c c g") 'git-root-path)
 
 ;;----------------------------------------------------------------------------
 ;; open recent directories, requires ivy (part of swiper)
@@ -570,7 +570,7 @@ If not in a Git repo, uses the current directory."
                          :initial-input nil)))
       (dired dir))))
 
-(global-set-key (kbd "C-x C-d") 'bjm/ivy-dired-recent-dirs)
+(bind-key (kbd "C-x C-d") 'bjm/ivy-dired-recent-dirs)
 
 ;;----------------------------------------------------------------------------
 ;; launch terminal at the git root or at the current file location
@@ -611,7 +611,7 @@ If not in a Git repo, uses the current directory."
 
 (add-hook 'term-exec-hook 'set-no-process-query-on-exit)
 
-(global-set-key (kbd "C-c o s") 'ansi-term)
+(bind-key (kbd "C-c o s") 'ansi-term)
 
 ;;----------------------------------------------------------------------------
 ;; reveal file in finder
@@ -643,7 +643,7 @@ In case the execution fails, return an error."
        (unless behind
          "tell application \"Finder\" to activate"))))))
 
-(global-set-key (kbd "C-c o f") 'show-in-finder)
+(bind-key (kbd "C-c o f") 'show-in-finder)
 
 ;;----------------------------------------------------------------------------
 ;; load eslint,tslint from local node_modules when possible
@@ -703,7 +703,7 @@ In case the execution fails, return an error."
         (newline)
         (indent-to-column col)))))
 
-(global-set-key (kbd "C-<return>") 'newline-before-the-current-line)
+(bind-key (kbd "C-<return>") 'newline-before-the-current-line)
 
 ;;----------------------------------------------------------------------------
 ;; new line above current line and indent accordingly
@@ -717,7 +717,7 @@ In case the execution fails, return an error."
   (forward-line -1)
   (indent-according-to-mode))
 
-(global-set-key (kbd "M-S-<return>") 'newline-before-the-current-line-indent)
+(bind-key (kbd "M-S-<return>") 'newline-before-the-current-line-indent)
 
 ;;----------------------------------------------------------------------------
 ;; new line and indent
@@ -728,7 +728,7 @@ In case the execution fails, return an error."
      (move-end-of-line 1)
      (newline-and-indent))
 
-(global-set-key (kbd "M-<return>") 'newline-at-end-of-line)
+(bind-key (kbd "M-<return>") 'newline-at-end-of-line)
 
 ;;----------------------------------------------------------------------------
 ;; insert relative/full path between two files
@@ -754,13 +754,13 @@ In case the execution fails, return an error."
         (t
          (insert (file-relative-name filename)))))
 
-(global-set-key (kbd "C-c i p") 'bjm/insert-file-name)
+(bind-key (kbd "C-c i p") 'bjm/insert-file-name)
 
 ;;----------------------------------------------------------------------------
 ;; swap query replace - query replace regexp keybindings
 ;;----------------------------------------------------------------------------
-(global-set-key (kbd "C-M-%") 'query-replace)
-(global-set-key (kbd "M-%") 'query-replace-regexp)
+(bind-key (kbd "C-M-%") 'query-replace)
+(bind-key (kbd "M-%") 'query-replace-regexp)
 
 ;;----------------------------------------------------------------------------
 ;; M-] to indent and M-[ to unindent
@@ -780,8 +780,8 @@ In case the execution fails, return an error."
   (interactive "P")
   (keyboard-indent (* -1 (or arg 1))))
 
-(global-set-key (kbd "M-]") 'keyboard-indent)
-(global-set-key (kbd "M-[") 'keyboard-unindent)
+(bind-key (kbd "M-]") 'keyboard-indent)
+(bind-key (kbd "M-[") 'keyboard-unindent)
 
 ;;----------------------------------------------------------------------------
 ;; reload update buffer if changed on disk automatically
@@ -792,7 +792,7 @@ In case the execution fails, return an error."
 (setq auto-revert-verbose nil)
 (defvar global-auto-revert-non-file-buffers nil)
 (setq global-auto-revert-non-file-buffers t)
-(global-set-key (kbd "<f5>") 'revert-buffer)
+(bind-key (kbd "<f5>") 'revert-buffer)
 
 ;;----------------------------------------------------------------------------
 ;; kill back to indentation
@@ -804,7 +804,7 @@ In case the execution fails, return an error."
     (back-to-indentation)
     (kill-region (point) prev-pos)))
 
-(global-set-key (kbd "C-S-k") 'kill-back-to-indentation)
+(bind-key (kbd "C-S-k") 'kill-back-to-indentation)
 
 ;;----------------------------------------------------------------------------
 ;; kill entire line to indentation
@@ -815,7 +815,7 @@ In case the execution fails, return an error."
   (kill-whole-line arg)
   (back-to-indentation))
 
-(global-set-key [remap kill-whole-line] 'smart-kill-whole-line)
+(bind-key [remap kill-whole-line] 'smart-kill-whole-line)
 
 ;;----------------------------------------------------------------------------
 ;; use wgrep-ag to edit/overwrite readable buffers
@@ -962,16 +962,6 @@ In case the execution fails, return an error."
   (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
-;; auto-yasnippet
-;; hybrid of keyboard macro and yasnippet
-;;----------------------------------------------------------------------------
-(use-package auto-yasnippet
-  :commands (aya-create aya-expand)
-  :bind (
-         ("C-c y c" . aya-create)
-         ("C-c y e" . aya-expand)))
-
-;;----------------------------------------------------------------------------
 ;; set feature mode to edit Gherkin feature files
 ;;----------------------------------------------------------------------------
 (use-package feature-mode
@@ -995,7 +985,7 @@ In case the execution fails, return an error."
 ;; use Prettier for formatting
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  :init (add-hook 'js-mode-hook 'prettier-js-mode)
   )
 
 ;;----------------------------------------------------------------------------
@@ -1166,7 +1156,6 @@ In case the execution fails, return an error."
     (let ((buffers (magit-mode-get-buffers)))
       (magit-restore-window-configuration)
       (mapc #'kill-buffer buffers)))
-
   (magit-define-popup-switch 'magit-push-popup ?u
                              "Set upstream" "--set-upstream")
   (add-hook 'magit-mode-hook 'visual-line-mode)
@@ -1207,9 +1196,10 @@ In case the execution fails, return an error."
   :bind (
          ("C-c f" . counsel-git)
          ("C-c s" . counsel-rg)
+         ("C-c i m" . counsel-imenu)
          ("C-s" . counsel-grep-or-swiper)
-         ("C-x r b" . counsel-bookmark)
          ("M-y" . counsel-yank-pop)
+         ("C-c l m" . counsel-mark-ring)
          :map ivy-minibuffer-map
          ("M-y" . ivy-next-line))
   :commands counsel-mode
@@ -1222,8 +1212,6 @@ In case the execution fails, return an error."
   (setq counsel-git-cmd "rg --files")
   (setq counsel-rg-base-command
         "rg -i -M 120 --no-heading --line-number --color never %s ."))
-;; (setq counsel-grep-base-command
-;;       "rg -i -M 120 --no-heading --line-number --color never %s %s"))
 
 ;;----------------------------------------------------------------------------
 ;; use Avy to jump between words in visible buffers
@@ -1263,11 +1251,33 @@ In case the execution fails, return an error."
 ;; Company mode
 ;;----------------------------------------------------------------------------
 (use-package company
-  :bind ("C-c t c" . company-manual-begin)
+  :bind (("<C-tab>" . company-complete))
   :commands global-company-mode
   :init
   (add-hook 'after-init-hook #'global-company-mode)
   :config
+
+  ;; use shift + tab to show yasnippet completions
+  (defun sk/company-to-yasnippet ()
+    (interactive)
+    (company-abort)
+    (call-interactively 'company-yasnippet))
+  (bind-key "<backtab>" 'sk/company-to-yasnippet company-active-map)
+  (bind-key "<backtab>" 'company-yasnippet)
+
+  ;; expand valid yasnippet first, ignore other company completions
+  (defun company-yasnippet-or-completion ()
+    (interactive)
+    (let ((call-other-command nil))
+      (unless (yas-expand)
+        (call-interactively #'company-complete-common))))
+
+  (add-hook 'company-mode-hook
+            (lambda ()
+              (substitute-key-definition 'company-complete-common
+                                         'company-yasnippet-or-completion
+                                         company-active-map)))
+
   (setq company-frontends
         '(company-pseudo-tooltip-unless-just-one-frontend
           company-preview-if-just-one-frontend))
@@ -1446,6 +1456,12 @@ In that case, insert the number."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
+
+
+
+
+
+
 
 
 
