@@ -958,6 +958,7 @@ In case the execution fails, return an error."
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
   :config
+  (setq yas-triggers-in-field t)
   (setq yas-indent-line 'fixed)
   (yas-reload-all))
 
@@ -985,7 +986,7 @@ In case the execution fails, return an error."
 ;; use Prettier for formatting
 ;;----------------------------------------------------------------------------
 (use-package prettier-js
-  :init (add-hook 'js-mode-hook 'prettier-js-mode)
+  ;; :init (add-hook 'js-mode-hook 'prettier-js-mode)
   )
 
 ;;----------------------------------------------------------------------------
@@ -1248,36 +1249,43 @@ In case the execution fails, return an error."
     ("RET" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
+;; use shift + tab to show yasnippet completions
+;;----------------------------------------------------------------------------
+(defun sk/company-to-yasnippet ()
+  "Use shift+tab to show yasnippets at point."
+  (interactive)
+  (company-abort)
+  (call-interactively 'company-yasnippet))
+
+;;----------------------------------------------------------------------------
+;; expand valid yasnippet first, ignore other company completions
+;;----------------------------------------------------------------------------
+(defun company-yasnippet-or-completion ()
+  "Expand valid yasnippets first."
+  (interactive)
+  (let ((call-other-command nil))
+    (unless (yas-expand)
+      (call-interactively #'company-complete-common))))
+
+;;----------------------------------------------------------------------------
 ;; Company mode
 ;;----------------------------------------------------------------------------
 (use-package company
-  :bind (("<C-tab>" . company-complete))
+  ;; use ctrl + tab to show company completions
+  :bind (("<C-tab>" . company-complete)
+         (:map company-mode
+               ("<backtab>" . sk/company-to-yasnippet))
+         ("<backtab>" . company-yasnippet))
   :commands global-company-mode
   :init
   (add-hook 'after-init-hook #'global-company-mode)
   :config
-
-  ;; use shift + tab to show yasnippet completions
-  (defun sk/company-to-yasnippet ()
-    (interactive)
-    (company-abort)
-    (call-interactively 'company-yasnippet))
-  (bind-key "<backtab>" 'sk/company-to-yasnippet company-active-map)
-  (bind-key "<backtab>" 'company-yasnippet)
-
-  ;; expand valid yasnippet first, ignore other company completions
-  (defun company-yasnippet-or-completion ()
-    (interactive)
-    (let ((call-other-command nil))
-      (unless (yas-expand)
-        (call-interactively #'company-complete-common))))
 
   (add-hook 'company-mode-hook
             (lambda ()
               (substitute-key-definition 'company-complete-common
                                          'company-yasnippet-or-completion
                                          company-active-map)))
-
   (setq company-frontends
         '(company-pseudo-tooltip-unless-just-one-frontend
           company-preview-if-just-one-frontend))
