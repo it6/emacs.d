@@ -136,7 +136,7 @@
  buffers-menu-max-size 30
  ediff-split-window-function 'split-window-horizontally
  ediff-window-setup-function 'ediff-setup-windows-plain
- scroll-preserve-screen-position 'always
+ scroll-preserve-screen-position 't
  tooltip-delay 1.5
  truncate-lines nil
  truncate-partial-width-windows nil)
@@ -176,6 +176,13 @@
 ;; cleanup whitespace before saving a file
 ;;----------------------------------------------------------------------------
 (add-hook 'before-save-hook 'whitespace-cleanup)
+
+;;----------------------------------------------------------------------------
+;; clear previous theme before loading new one
+;;----------------------------------------------------------------------------
+(defadvice load-theme (before clear-previous-themes activate)
+  "Clear existing theme settings instead of layering them."
+  (mapc #'disable-theme custom-enabled-themes))
 
 ;;----------------------------------------------------------------------------
 ;; draw block cursor as wide as the glyph under it
@@ -373,7 +380,7 @@
 ;; set regular font and unicode character font
 ;;----------------------------------------------------------------------------
 (set-fontset-font "fontset-default" 'unicode "operator mono 14")
-(setq default-frame-alist '((font . "operator mono 14")))
+(setq default-frame-alist '((font . "operator mono ssm 14")))
 
 ;;----------------------------------------------------------------------------
 ;; disable toolbars
@@ -421,6 +428,7 @@
 (add-to-list 'auto-mode-alist '("\\macos\\'" . sh-mode))
 (add-to-list 'auto-mode-alist '("\\.gitconfig\\'" . conf-unix-mode))
 (add-to-list 'auto-mode-alist '("\\.svg$" . xml-mode))
+(add-to-list 'auto-mode-alist '("\\.jsbeautifyrc" . js-mode))
 
 ;;----------------------------------------------------------------------------
 ;; indent after pasting text into emacs
@@ -681,7 +689,7 @@ In case the execution fails, return an error."
 ;;----------------------------------------------------------------------------
 ;; new line above/below current line with fixed line indentation
 ;;----------------------------------------------------------------------------
-(defun newline-before-the-current-line (&optional *newline-above)
+(defun newline-below-and-indent-same-level (&optional *newline-above)
   "Move to end of line, enter a newline, and reindent.
 *NEWLINE-ABOVE is optional `universal-argument' to insert new line above"
   (interactive "P")
@@ -703,7 +711,21 @@ In case the execution fails, return an error."
         (newline)
         (indent-to-column col)))))
 
-(bind-key (kbd "C-<return>") 'newline-before-the-current-line)
+(defun newline-above-and-indent-same-level ()
+  "Insert a newline, then indent to the same column as the current line."
+  (interactive)
+  (progn
+    (unless (bolp)
+      (beginning-of-line))
+    (let ((col (save-excursion
+                 (back-to-indentation)
+                 (current-column))))
+      (newline)
+      (forward-line -1)
+      (indent-to-column col))))
+
+(bind-key (kbd "C-S-<return>") 'newline-above-and-indent-same-level)
+(bind-key (kbd "C-<return>") 'newline-below-and-indent-same-level)
 
 ;;----------------------------------------------------------------------------
 ;; new line above current line and indent accordingly
@@ -912,7 +934,9 @@ In case the execution fails, return an error."
 ;; expand region
 ;;----------------------------------------------------------------------------
 (use-package expand-region
-  :bind ("C-=" . er/expand-region))
+  :bind (("C-'" . er/mark-inside-quotes)
+         ("C-\"" . er/mark-inside-pairs)
+         ("C-=" . er/expand-region)))
 
 ;;----------------------------------------------------------------------------
 ;; symbol highlight at point and navigate next previous
@@ -958,8 +982,9 @@ In case the execution fails, return an error."
   (add-hook 'term-mode-hook (lambda()
                               (yas-minor-mode -1)))
   :config
+  (define-key yas-minor-mode-map (kbd "DEL")
+    yas-maybe-skip-and-clear-field)
   (setq yas-triggers-in-field t)
-  (setq yas-indent-line 'fixed)
   (yas-reload-all))
 
 ;;----------------------------------------------------------------------------
@@ -973,6 +998,7 @@ In case the execution fails, return an error."
 ;; enable flycheck mode globally
 ;;----------------------------------------------------------------------------
 (use-package flycheck
+  :bind (("C-c l b" . flycheck-buffer))
   :config
   (global-flycheck-mode)
   (setq-default flycheck-disabled-checkers '(html-tidy javascript-jshint json-python-json)))
@@ -1324,8 +1350,10 @@ In that case, insert the number."
   (interactive)
   (let* ((k (this-command-keys))
          (re (concat "^" company-prefix k)))
-    (if (cl-find-if (lambda (s) (string-match re s))
-                    company-candidates)
+    (if (or (cl-find-if (lambda (s) (string-match re s))
+                        company-candidates)
+            (> (string-to-number k)
+               (length company-candidates)))
         (self-insert-command 1)
       (company-complete-number
        (if (equal k "0")
