@@ -1272,6 +1272,14 @@ In case the execution fails, return an error."
     ("h" diff-hl-revert-hunk "revert hunk")
     ("b" vc-revert "revert buffer")
     ("q" nil "Quit")
+    ("RET" nil "Quit"))
+
+  (defhydra hydra-string-inflection
+    (global-map "C-c c"
+                :color red)
+    "string-inflection"
+    ("a" string-inflection-all-cycle "all cases")
+    ("q" nil "Quit")
     ("RET" nil "Quit")))
 
 ;;----------------------------------------------------------------------------
@@ -1490,9 +1498,16 @@ In that case, insert the number."
   :bind (("C-c P" . embrace-commander)))
 
 ;;----------------------------------------------------------------------------
+;; string inflection converts strings to camel/kebab/upper/lower etc.. cases
+;;----------------------------------------------------------------------------
+(use-package string-inflection
+  :bind (("C-*" . string-inflection-all-cycle)
+         ("C-c c c" . string-inflection-lower-camelcase)
+         ("C-c c k" . string-inflection-kebab-case)))
+
+;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
