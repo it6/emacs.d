@@ -379,8 +379,8 @@
 ;;----------------------------------------------------------------------------
 ;; set regular font and unicode character font
 ;;----------------------------------------------------------------------------
-(set-fontset-font "fontset-default" 'unicode "operator mono 14")
-(setq default-frame-alist '((font . "operator mono ssm 14")))
+(set-fontset-font "fontset-default" 'unicode "monoid 13")
+(setq default-frame-alist '((font . "monoid 13")))
 
 ;;----------------------------------------------------------------------------
 ;; disable toolbars
@@ -485,6 +485,21 @@
       (progn nil) t))
 
 (add-hook 'kill-buffer-query-functions 'donot-kill-scratch-buffer)
+
+;;----------------------------------------------------------------------------
+;; use anaconda mode for python files
+;;----------------------------------------------------------------------------
+(use-package anaconda-mode)
+(use-package py-yapf)
+(add-hook 'python-mode-hook 'anaconda-mode)
+(add-hook 'python-mode-hook 'py-yapf-enable-on-save)
+
+;;----------------------------------------------------------------------------
+;; Send entire python buffer to python3 and display result
+;;----------------------------------------------------------------------------
+(add-hook 'python-mode-hook (lambda ()
+                              (define-key python-mode-map (kbd "C-c e")
+                                '(lambda ()  (interactive) (shell-command-on-region (point-min) (point-max) "python3")))))
 
 ;;----------------------------------------------------------------------------
 ;; kill all other open buffers except the current one
@@ -1110,6 +1125,23 @@ In case the execution fails, return an error."
 (use-package less-css-mode)
 
 ;;----------------------------------------------------------------------------
+;; setup clang-format and execute C programs configuration
+;; (add-hook 'before-save-hook 'clang-format-before-save).
+;;----------------------------------------------------------------------------
+(use-package clang-format)
+(defun clang-format-before-save ()
+  "Add this to .emacs to clang-format on save."
+  (interactive)
+  (when (eq major-mode 'c-mode) (clang-format-buffer)))
+
+;; install hook to use clang-format on save
+(add-hook 'before-save-hook 'clang-format-before-save)
+(eval-after-load 'cc-mode
+  '(define-key c-mode-map (kbd "C-c e")
+     '(lambda ()  (interactive) (defvar sk-build-command)
+        (setq sk-build-command (concat "clang " (buffer-name) " && ./a.out")) (shell-command sk-build-command) )))
+
+;;----------------------------------------------------------------------------
 ;; rust mode
 ;;----------------------------------------------------------------------------
 (use-package rust-mode
@@ -1508,7 +1540,6 @@ In that case, insert the number."
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
 ;;----------------------------------------------------------------------------
-
 
 
 
