@@ -487,12 +487,18 @@
 (add-hook 'kill-buffer-query-functions 'donot-kill-scratch-buffer)
 
 ;;----------------------------------------------------------------------------
-;; use anaconda mode for python files
+;; use jedi mode for python files
 ;;----------------------------------------------------------------------------
-(use-package anaconda-mode)
-(use-package py-yapf)
-(add-hook 'python-mode-hook 'anaconda-mode)
-(add-hook 'python-mode-hook 'py-yapf-enable-on-save)
+(use-package company-jedi
+  :config
+  (add-hook 'python-mode-hook (lambda() (add-to-list 'company-backends 'company-jedi))))
+
+;;----------------------------------------------------------------------------
+;; use py-yapf for auto formatting python files
+;;----------------------------------------------------------------------------
+(use-package py-yapf
+  :config
+  (add-hook 'python-mode-hook 'py-yapf-enable-on-save))
 
 ;;----------------------------------------------------------------------------
 ;; Send entire python buffer to python3 and display result
@@ -1268,6 +1274,7 @@ In case the execution fails, return an error."
   ;; ignore dot files from counsel find file to see them press dot
   (setq counsel-find-file-ignore-regexp "\\`\\.")
   (setq counsel-preselect-current-file t)
+  (setq counsel-find-file-at-point t)
   (setq counsel-git-cmd "rg --files")
   (setq counsel-rg-base-command
         "rg -i -M 120 --no-heading --line-number --color never %s ."))
