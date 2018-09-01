@@ -199,7 +199,10 @@
 ;;----------------------------------------------------------------------------
 ;; use dark title bar
 ;;----------------------------------------------------------------------------
+(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
 (add-to-list 'default-frame-alist '(ns-appearance . dark))
+(setq ns-use-proxy-icon  nil)
+(setq frame-title-format nil)
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -1271,6 +1274,20 @@ In case the execution fails, return an error."
   :init
   (add-hook 'after-init-hook #'counsel-mode)
   :config
+  (ivy-add-actions 'counsel-git
+                   '(("p"
+                      (lambda (candidate)
+                        (insert
+                         (let ((relative-location
+                                (file-relative-name
+                                 (concat (git-root-dir) candidate)
+                                 (file-name-directory
+                                  (buffer-file-name)))))
+                           (concat (if (s-starts-with? "." relative-location)
+                                       ""
+                                     "./")
+                                   relative-location))))
+                      "insert relative file path")))
   ;; ignore dot files from counsel find file to see them press dot
   (setq counsel-find-file-ignore-regexp "\\`\\.")
   (setq counsel-preselect-current-file t)
