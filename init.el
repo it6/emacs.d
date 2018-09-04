@@ -13,7 +13,7 @@
 ;; Reset garbage collection threshold value to default after startup
 ;;----------------------------------------------------------------------------
 (add-hook 'after-init-hook
-    (lambda () (setq gc-cons-threshold 400000)))
+          (lambda () (setq gc-cons-threshold 400000)))
 
 ;;----------------------------------------------------------------------------
 ;; Set default directory for save files
@@ -35,7 +35,7 @@
 ;;----------------------------------------------------------------------------
 (package-initialize)
 (add-to-list 'package-archives
-       '("melpa" . "https://melpa.org/packages/"))
+             '("melpa" . "https://melpa.org/packages/"))
 
 ;;----------------------------------------------------------------------------
 ;; Bootstrap use-package
@@ -194,15 +194,15 @@
 ;;----------------------------------------------------------------------------
 (setq frame-title-format
       '(:eval (if (buffer-file-name)
-      (abbreviate-file-name (buffer-file-name)) "%b")))
+                  (abbreviate-file-name (buffer-file-name)) "%b")))
 
 ;;----------------------------------------------------------------------------
 ;; use dark title bar
 ;;----------------------------------------------------------------------------
-(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
 (add-to-list 'default-frame-alist '(ns-appearance . dark))
-(setq ns-use-proxy-icon  nil)
-(setq frame-title-format nil)
+;; (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
+;; (setq ns-use-proxy-icon  nil)
+;; (setq frame-title-format nil)
 
 ;;----------------------------------------------------------------------------
 ;; mouse yank at point instead of click
@@ -341,7 +341,7 @@
       (find-alternate-file "..")))
   ;; Prefer g-prefixed coreutils version of standard utilities when available
   (let ((gls (executable-find "gls")))
-       (when gls (setq insert-directory-program gls)))
+    (when gls (setq insert-directory-program gls)))
   ;; Default `ls' switches
   (setq dired-listing-switches "-alhF")
   ;; Do certain operations recursively
@@ -769,10 +769,10 @@ In case the execution fails, return an error."
 ;; new line and indent
 ;;----------------------------------------------------------------------------
 (defun newline-at-end-of-line ()
-     "Move to end of line, enter a newline, and reindent."
-     (interactive)
-     (move-end-of-line 1)
-     (newline-and-indent))
+  "Move to end of line, enter a newline, and reindent."
+  (interactive)
+  (move-end-of-line 1)
+  (newline-and-indent))
 
 (bind-key (kbd "M-<return>") 'newline-at-end-of-line)
 
@@ -1248,6 +1248,7 @@ In case the execution fails, return an error."
   (setq ivy-use-selectable-prompt t)
   (setq ivy-initial-inputs-alist nil)
   (setq ivy-use-virtual-buffers t)
+
   ;; press C-c C-a to show all hidden buffers
   ;; ignoring buffers starting with *
   (setq ivy-ignore-buffers '("\\` " "\\`\\*"))
@@ -1263,6 +1264,7 @@ In case the execution fails, return an error."
 (use-package counsel
   :bind (
          ("C-c f" . counsel-git)
+         ("C-x B" . counsel-recentf)
          ("C-c s" . counsel-rg)
          ("C-c i m" . counsel-imenu)
          ("C-s" . counsel-grep-or-swiper)
@@ -1274,19 +1276,29 @@ In case the execution fails, return an error."
   :init
   (add-hook 'after-init-hook #'counsel-mode)
   :config
+  (defun relative-file-path (candidate)
+    (insert
+     (let ((relative-location
+            (file-relative-name
+             (if (git-root-dir)
+                 (progn
+                   (concat (git-root-dir) candidate))
+               (progn
+                 (concat default-directory candidate)
+                 ))
+             (file-name-directory
+              (buffer-file-name)))))
+       (concat (if (s-starts-with? "." relative-location)
+                   ""
+                 "./")
+               relative-location))))
   (ivy-add-actions 'counsel-git
                    '(("p"
-                      (lambda (candidate)
-                        (insert
-                         (let ((relative-location
-                                (file-relative-name
-                                 (concat (git-root-dir) candidate)
-                                 (file-name-directory
-                                  (buffer-file-name)))))
-                           (concat (if (s-starts-with? "." relative-location)
-                                       ""
-                                     "./")
-                                   relative-location))))
+                      relative-file-path
+                      "insert relative file path")))
+  (ivy-add-actions 'counsel-find-file
+                   '(("p"
+                      relative-file-path
                       "insert relative file path")))
   ;; ignore dot files from counsel find file to see them press dot
   (setq counsel-find-file-ignore-regexp "\\`\\.")
@@ -1560,6 +1572,14 @@ In that case, insert the number."
   :bind (("C-*" . string-inflection-all-cycle)
          ("C-c c c" . string-inflection-lower-camelcase)
          ("C-c c k" . string-inflection-kebab-case)))
+
+;;----------------------------------------------------------------------------
+;; popwin to manage popup buffers
+;;----------------------------------------------------------------------------
+(use-package popwin
+  :config
+  (progn
+    (popwin-mode 1)))
 
 ;;----------------------------------------------------------------------------
 ;; experimental settings - try them before adding to init.el
